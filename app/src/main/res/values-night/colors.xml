@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand Colors (Adjusted for Dark Mode visibility) -->
+    <color name="teal_main">#179A9D</color>
+    <color name="teal_dark">#004D4F</color>
+    <color name="teal_light">#26A6A9</color>
+
+    <color name="selected_item_bg">#B2E0E1</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#EEEEEE</color>
+    <color name="text_secondary">#BDBDBD</color>
+
+    <!-- Tile Backgrounds -->
+    <color name="tile_bg">#2C2C2C</color>
+
+    <!-- Splash Background -->
+    <color name="splash_bg">#FF000000</color>
+</resources>

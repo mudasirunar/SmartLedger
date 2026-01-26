@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_dashboard"
+            android:icon="@drawable/ic_dashboard"
+            android:title="Dashboard" />
+
+        <item
+            android:id="@+id/nav_electricity"
+            android:icon="@drawable/ic_bolt"
+            android:title="Electricity" />
+
+        <item
+            android:id="@+id/nav_milk"
+            android:icon="@drawable/ic_water_drop"
+            android:title="Milk Records" />
+
+        <item
+            android:id="@+id/nav_expenses"
+            android:icon="@drawable/ic_attach_money"
+            android:title="Expenses" />
+
+        <item
+            android:id="@+id/nav_analytics"
+            android:icon="@drawable/ic_pie_chart"
+            android:title="Analytics" />
+    </group>
+
+    <item android:title="Tools">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/nav_calculator"
+                    android:icon="@drawable/ic_calculate"
+                    android:title="Calculator" />
+                <item
+                    android:id="@+id/nav_trash"
+                    android:icon="@drawable/ic_delete"
+                    android:title="Trash Bin" />
+
+                <item
+                    android:id="@+id/nav_backup"
+                    android:icon="@drawable/ic_save"
+                    android:title="Backup Data" />
+
+                <item
+                    android:id="@+id/nav_restore"
+                    android:icon="@drawable/ic_refresh"
+                    android:title="Restore Data" />
+                <item
+                    android:id="@+id/nav_wipe_data"
+                    android:icon="@drawable/ic_delete"
+                    android:title="Wipe / Reset App" />
+            </group>
+        </menu>
+    </item>
+</menu>

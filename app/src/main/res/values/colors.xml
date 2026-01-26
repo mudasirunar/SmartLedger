@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand Colors -->
+    <color name="teal_main">#179A9D</color>
+    <color name="teal_dark">#006B6E</color> <!-- Darker shade for dark mode elements -->
+    <color name="teal_light">#B2E0E1</color> <!-- Lighter shade for backgrounds/ripples -->
+
+    <color name="selected_item_bg">#B2E0E1</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+
+    <!-- Gemini -->
+    <color name="gemini_blue">#4285F4</color>
+    <color name="gemini_purple">#9B72CB</color>
+    <color name="gemini_teal">#179A9D</color>
+    <color name="gemini_bg_gradient_start">#1A1C1E</color>
+
+    <!-- Tile Backgrounds -->
+    <color name="tile_bg">#F5F5F5</color>
+
+    <!-- Splash Background -->
+    <color name="splash_bg">#FFFFFFFF</color>
+</resources>

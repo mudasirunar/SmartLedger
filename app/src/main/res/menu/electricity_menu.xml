@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_select_mode"
+        android:title="Select Item(s)"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_sort"
+        android:title="Sort By"
+        app:showAsAction="never">
+
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/sort_default"
+                    android:title="Date (Newest First)"
+                    android:checked="true" />
+                <item
+                    android:id="@+id/sort_date_asc"
+                    android:title="Date (Oldest First)" />
+                <item
+                    android:id="@+id/sort_amount_desc"
+                    android:title="Amount (High to Low)" />
+                <item
+                    android:id="@+id/sort_amount_asc"
+                    android:title="Amount (Low to High)" />
+
+                <item
+                    android:id="@+id/sort_units_desc"
+                    android:title="Units (High to Low)" />
+                <item
+                    android:id="@+id/sort_units_asc"
+                    android:title="Units (Low to High)" />
+            </group>
+        </menu>
+    </item>
+</menu>

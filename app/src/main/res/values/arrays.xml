@@ -1,0 +1,7 @@
+<resources>
+    <array name="gemini_colors">
+        <item>@color/gemini_blue</item>
+        <item>@color/gemini_purple</item>
+        <item>@color/gemini_teal</item>
+    </array>
+</resources>

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:colorBackground"
+    android:orientation="vertical"
+    tools:context=".activity.CalculatorActivity">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/topAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/teal_main"
+        app:title="Calculator"
+        app:titleTextColor="@color/white"
+        app:navigationIcon="@drawable/ic_arrow_back" />
+
+    <!-- Screen Area (Input & Result) -->
+    <LinearLayout
+        android:id="@+id/screenArea"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.35"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- WRAPPED IN SCROLLVIEW FOR SCROLLABLE INPUT -->
+        <ScrollView
+            android:id="@+id/inputScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <TextView
+                android:id="@+id/tvInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end|bottom"
+                android:text=""
+                android:textColor="@color/text_primary"
+                android:textSize="40sp" />
+        </ScrollView>
+
+        <TextView
+            android:id="@+id/tvResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:text=""
+            android:textColor="@color/teal_main"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:scrollbars="vertical"
+            android:ellipsize="none" />
+    </LinearLayout>
+
+    <!-- HISTORY TOGGLE ROW (Stable, doesn't slide) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:colorBackground"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <ImageButton
+            android:id="@+id/btnHistoryToggle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@null"
+            android:src="@drawable/ic_history"
+            app:tint="@color/text_secondary"
+            android:contentDescription="History"
+            android:scaleType="centerInside"/>
+    </FrameLayout>
+
+    <!-- BOTTOM CONTAINER: Holds History LIST and Keypad GRID -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.65">
+
+        <!-- 1. HISTORY LIST -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvHistory"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:visibility="gone"
+            android:clipToPadding="false"/>
+
+        <!-- 2. KEYPAD GRID -->
+        <GridLayout
+            android:id="@+id/keypadGrid"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:columnCount="4"
+            android:padding="8dp"
+            android:paddingTop="8dp"
+            android:rowCount="5"
+            android:background="?android:colorBackground">
+
+            <!-- Row 1 -->
+            <Button android:id="@+id/btnClear" style="@style/Widget.Material3.Button" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:backgroundTint="#F44336" android:text="C" android:textSize="20sp" android:textColor="@color/white" />
+            <Button android:id="@+id/btnBack" style="@style/Widget.Material3.Button" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:backgroundTint="#EF5350" android:text="⌫" android:textSize="18sp" android:textColor="@color/white" />
+            <Button android:id="@+id/btnDivide" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="÷" android:textSize="28sp" android:textColor="@color/teal_main" app:strokeColor="@color/teal_main" />
+            <Button android:id="@+id/btnMultiply" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="×" android:textSize="28sp" android:textColor="@color/teal_main" app:strokeColor="@color/teal_main" />
+
+            <!-- Row 2 -->
+            <Button android:id="@+id/btn7" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="7" android:textSize="24sp"/>
+            <Button android:id="@+id/btn8" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="8" android:textSize="24sp"/>
+            <Button android:id="@+id/btn9" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="9" android:textSize="24sp"/>
+            <Button android:id="@+id/btnSubtract" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="−" android:textSize="28sp" android:textColor="@color/teal_main" app:strokeColor="@color/teal_main"/>
+
+            <!-- Row 3 -->
+            <Button android:id="@+id/btn4" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="4" android:textSize="24sp"/>
+            <Button android:id="@+id/btn5" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="5" android:textSize="24sp"/>
+            <Button android:id="@+id/btn6" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="6" android:textSize="24sp"/>
+            <Button android:id="@+id/btnAdd" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="+" android:textSize="28sp" android:textColor="@color/teal_main" app:strokeColor="@color/teal_main"/>
+
+            <!-- Row 4 -->
+            <Button android:id="@+id/btn1" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="1" android:textSize="24sp"/>
+            <Button android:id="@+id/btn2" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="2" android:textSize="24sp"/>
+            <Button android:id="@+id/btn3" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="3" android:textSize="24sp"/>
+            <Button android:id="@+id/btnEquals" style="@style/Widget.Material3.Button" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_rowSpan="2" android:layout_gravity="fill" android:layout_margin="6dp" android:backgroundTint="@color/teal_main" android:text="=" android:textSize="32sp" android:textColor="@color/white" />
+
+            <!-- Row 5 -->
+            <Button android:id="@+id/btn00" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="00" android:textSize="20sp"/>
+            <Button android:id="@+id/btn0" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="0" android:textSize="24sp"/>
+            <Button android:id="@+id/btnDot" style="@style/Widget.Material3.Button.ElevatedButton" android:layout_width="0dp" android:layout_height="0dp" android:layout_rowWeight="1" android:layout_columnWeight="1" android:layout_margin="6dp" android:text="." android:textSize="24sp"/>
+
+        </GridLayout>
+    </FrameLayout>
+</LinearLayout>

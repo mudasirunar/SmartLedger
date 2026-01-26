@@ -1,0 +1,413 @@
+package com.example.smartledger.activity
+
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.GestureDetector
+import android.view.Menu
+import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.View
+import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
+import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.smartledger.MainActivity
+import com.example.smartledger.R
+import com.example.smartledger.adapter.ElectricityAdapter
+import com.example.smartledger.data.AppDatabase
+import com.example.smartledger.data.Electricity
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.navigation.NavigationView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.abs
+
+class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var adapter: ElectricityAdapter
+    private lateinit var fabAdd: FloatingActionButton
+    private lateinit var tvEmpty: View
+    private lateinit var gestureDetector: GestureDetector
+
+    private val db by lazy { AppDatabase.getDatabase(this) }
+
+    // Selection & Sort
+    private var actionMode: ActionMode? = null
+    private var loadJob: Job? = null
+
+    private val addEditLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // Flow updates automatically
+    }
+
+    // Sorting Options (Date refers to End Date for Electricity)
+    enum class SortType { DATE_DESC, DATE_ASC, AMOUNT_DESC, AMOUNT_ASC, UNITS_DESC, UNITS_ASC }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContentView(R.layout.activity_electricity)
+
+        setupWindowInsets()
+        setupUI()
+        setupGestures()
+        loadRecords(SortType.DATE_DESC)
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                } else if (actionMode != null) {
+                    actionMode?.finish()
+                } else {
+                    // Navigate back to Dashboard
+                    val intent = Intent(this@ElectricityActivity, MainActivity::class.java) // Change Activity Name accordingly
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        })
+    }
+
+    private fun setupWindowInsets() {
+        val mainContent = findViewById<View>(R.id.main_content)
+        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+    }
+
+    private fun setupUI() {
+        drawerLayout = findViewById(R.id.drawer_layout)
+        val navigationView = findViewById<NavigationView>(R.id.navigationView)
+        val topAppBar = findViewById<MaterialToolbar>(R.id.topAppBar)
+
+        setSupportActionBar(topAppBar)
+        topAppBar.setNavigationOnClickListener { finish() }
+
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+        navigationView.setNavigationItemSelectedListener(this)
+
+        fabAdd = findViewById(R.id.fabAdd)
+        tvEmpty = findViewById(R.id.tvEmpty)
+        val recyclerView = findViewById<RecyclerView>(R.id.rvElectricity)
+
+        adapter = ElectricityAdapter(
+            onNormalClick = { record ->
+                if (actionMode != null) {
+                    // Adapter handles selection logic
+                } else {
+                    val intent = Intent(this, ViewElectricityActivity::class.java)
+                    intent.putExtra("electricity_data", record)
+                    startActivity(intent)
+                }
+            },
+            onLongClick = {
+                if (actionMode == null) {
+                    actionMode = startSupportActionMode(actionModeCallback)
+                }
+            },
+            onSelectionChange = { count ->
+                actionMode?.title = "$count Selected"
+                val selectAllItem = actionMode?.menu?.findItem(R.id.action_select_all)
+                if (adapter.isAllSelected()) {
+                    selectAllItem?.setIcon(R.drawable.ic_select_all_active)
+                } else {
+                    selectAllItem?.setIcon(R.drawable.ic_select_all)
+                }
+                selectAllItem?.icon?.setTint(getColor(R.color.white))
+            }
+        )
+
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
+
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dy > 0 && fabAdd.isShown) fabAdd.hide()
+                else if (dy < 0 && !fabAdd.isShown && actionMode == null) fabAdd.show()
+            }
+        })
+
+        fabAdd.setOnClickListener {
+            addEditLauncher.launch(Intent(this, AddEditElectricityActivity::class.java))
+        }
+    }
+
+    private fun loadRecords(sortType: SortType) {
+        loadJob?.cancel()
+        loadJob = lifecycleScope.launch {
+            val flow = when (sortType) {
+                SortType.DATE_DESC -> db.electricityDao().getAllByDateDesc()
+                SortType.DATE_ASC -> db.electricityDao().getAllByDateAsc()
+                SortType.AMOUNT_DESC -> db.electricityDao().getAllByAmountDesc()
+                SortType.AMOUNT_ASC -> db.electricityDao().getAllByAmountAsc()
+                // NEW LOGIC
+                SortType.UNITS_DESC -> db.electricityDao().getAllByUnitsDesc()
+                SortType.UNITS_ASC -> db.electricityDao().getAllByUnitsAsc()
+            }
+            flow.collect { list ->
+                adapter.submitList(list) {
+                    findViewById<RecyclerView>(R.id.rvElectricity).scrollToPosition(0)
+                }
+                tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+                supportActionBar?.subtitle = "${list.size} Records"
+            }
+        }
+    }
+
+    // --- Action Mode ---
+    private val actionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            mode.menuInflater.inflate(R.menu.contextual_expense_menu, menu) // Reuse expense menu (it has Select All/Delete)
+            mode.title = "0 Selected"
+            window.statusBarColor = getColor(R.color.teal_dark)
+            fabAdd.hide()
+            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+            for(i in 0 until menu.size()) menu.getItem(i).icon?.setTint(getColor(R.color.white))
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            return when (item.itemId) {
+                R.id.action_select_all -> {
+                    if (adapter.isAllSelected()) {
+                        adapter.deselectAll()
+                        // Icon updates automatically via onSelectionChange
+                        Toast.makeText(this@ElectricityActivity, "Deselected All", Toast.LENGTH_SHORT).show()
+                    } else {
+                        adapter.selectAll()
+                        // Icon updates automatically via onSelectionChange
+                        Toast.makeText(this@ElectricityActivity, "Selected All", Toast.LENGTH_SHORT).show()
+                    }
+                    true
+                }
+                R.id.action_delete_selection -> {
+                    val selected = adapter.getSelectedItems()
+                    if (selected.isNotEmpty()) {
+                        showDeleteConfirmationDialog(selected, mode)
+                    } else {
+                        // --- FIX: SHOW TOAST IF NOTHING SELECTED ---
+                        Toast.makeText(this@ElectricityActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            adapter.endSelectionMode()
+            actionMode = null
+            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+            window.statusBarColor = getColor(R.color.teal_main)
+            fabAdd.show()
+        }
+    }
+
+    private fun showDeleteConfirmationDialog(items: List<Electricity>, mode: ActionMode) {
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
+        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
+        builder.setView(dialogView)
+        val dialog = builder.create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
+        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
+        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
+        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
+        val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
+
+
+        btnConfirm.text = "Delete"
+
+        if(items.size == 1) {
+            tvTitle.text = "Delete Record"
+            val item = items[0]
+            tvMessage.text = "Are you sure you want to delete this record?"
+            containerDetails.visibility = View.VISIBLE
+            val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
+            val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
+            tvDetailTitle.text = "${item.totalUnits ?: 0} Units"
+            tvDetailAmount.text = "Rs ${item.amount ?: 0.0}"
+        } else {
+            tvTitle.text = "Delete Records"
+            tvMessage.text = "Are you sure you want to delete these ${items.size} records?"
+            containerDetails.visibility = View.GONE
+        }
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            lifecycleScope.launch {
+                val ids = items.map { it.id }
+
+                withContext(Dispatchers.IO) {
+                    db.electricityDao().softDelete(ids, System.currentTimeMillis())
+                }
+
+                // Logic for singular/plural Toast
+                val message = if (ids.size == 1) "Item moved to Trash" else "${ids.size} items moved to Trash"
+                Toast.makeText(this@ElectricityActivity, message, Toast.LENGTH_SHORT).show()
+
+                mode.finish()
+            }
+        }
+        dialog.show()
+    }
+
+    // --- Menu ---
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.electricity_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_select_mode -> {
+                if (actionMode == null) {
+                    actionMode = startSupportActionMode(actionModeCallback)
+                    adapter.startSelectionMode(null)
+                }
+                true
+            }
+            // ADDED TOASTS TO ALL CASES
+            R.id.sort_default -> {
+                item.isChecked = true
+                loadRecords(SortType.DATE_DESC)
+                Toast.makeText(this, "Sorting: Date (Newest)", Toast.LENGTH_SHORT).show()
+                true
+            }
+            R.id.sort_date_asc -> {
+                item.isChecked = true
+                loadRecords(SortType.DATE_ASC)
+                Toast.makeText(this, "Sorting: Date (Oldest)", Toast.LENGTH_SHORT).show()
+                true
+            }
+            R.id.sort_amount_desc -> {
+                item.isChecked = true
+                loadRecords(SortType.AMOUNT_DESC)
+                Toast.makeText(this, "Sorting: Amount (High to Low)", Toast.LENGTH_SHORT).show()
+                true
+            }
+            R.id.sort_amount_asc -> {
+                item.isChecked = true
+                loadRecords(SortType.AMOUNT_ASC)
+                Toast.makeText(this, "Sorting: Amount (Low to High)", Toast.LENGTH_SHORT).show()
+                true
+            }
+            // NEW CASES FOR UNITS
+            R.id.sort_units_desc -> {
+                item.isChecked = true
+                loadRecords(SortType.UNITS_DESC)
+                Toast.makeText(this, "Sorting: Units (High to Low)", Toast.LENGTH_SHORT).show()
+                true
+            }
+            R.id.sort_units_asc -> {
+                item.isChecked = true
+                loadRecords(SortType.UNITS_ASC)
+                Toast.makeText(this, "Sorting: Units (Low to High)", Toast.LENGTH_SHORT).show()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    // --- Gestures & Navigation ---
+    private fun setupGestures() {
+        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean = false
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vX: Float, vY: Float): Boolean {
+                if (actionMode != null || e1 == null) return false
+                val diffX = e2.x - e1.x
+                val diffY = e2.y - e1.y
+                if (abs(diffX) > abs(diffY) && abs(diffX) > 100 && abs(vX) > 100) {
+                    if (diffX > 0 && !drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                        drawerLayout.openDrawer(GravityCompat.START)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (ev != null) gestureDetector.onTouchEvent(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        drawerLayout.closeDrawer(GravityCompat.START)
+        Handler(Looper.getMainLooper()).postDelayed({
+            when (item.itemId) {
+                R.id.nav_dashboard -> {
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    startActivity(intent)
+                    finish()
+                }
+                R.id.nav_electricity -> {
+                    // Already Here
+                }
+                R.id.nav_milk -> {
+                    val intent = Intent(this, MilkActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    startActivity(intent)
+                    finish()
+                }
+                R.id.nav_expenses -> {
+                    val intent = Intent(this, ExpenseActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    startActivity(intent)
+                    finish()
+                }
+                R.id.nav_analytics -> {
+                    val intent = Intent(this, AnalyticsActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    startActivity(intent)
+                    finish()
+                }
+                R.id.nav_trash -> {
+                    startActivity(Intent(this, TrashBinActivity::class.java))
+                    finish()
+                }
+                R.id.nav_calculator -> {
+                    startActivity(Intent(this, CalculatorActivity::class.java))
+                }
+                R.id.nav_backup,
+                R.id.nav_restore,
+                R.id.nav_wipe_data -> {
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    startActivity(intent)
+                    finish()
+                    Toast.makeText(this, "Manage this setting from Dashboard", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }, 250)
+        return true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_electricity)
+    }
+}

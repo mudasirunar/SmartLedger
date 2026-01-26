@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/aiRootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?android:colorBackground">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/aiToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:title="Gemini Analysis"
+        app:titleTextColor="@color/white"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@color/white" />
+
+    <LinearLayout
+        android:id="@+id/loaderContainer"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:orientation="vertical"/>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ImageView
+            android:id="@+id/ivGeminiLogoBg"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_gravity="center"
+            android:alpha="0.45"
+            android:src="@drawable/ic_gemini_logo" />
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scrollContent"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/tvAiContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="24dp"
+                android:textSize="17sp"
+                android:lineSpacingExtra="8dp"
+                android:textColor="?attr/colorOnSurface" />
+        </androidx.core.widget.NestedScrollView>
+
+        <LinearLayout
+            android:id="@+id/loadingLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <ImageView
+                android:id="@+id/ivErrorIcon"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_error_outline"
+                android:visibility="gone"
+                app:tint="#EF5350" />
+
+            <TextView
+                android:id="@+id/tvWakingGemini"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Consulting Ledger AI..."
+                android:textSize="18sp"
+                android:textAlignment="center"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:text="Try Again"
+                android:visibility="gone"
+                app:cornerRadius="24dp"
+                android:textColor="@color/white"
+                app:backgroundTint="@color/gemini_blue"
+                app:icon="@drawable/ic_refresh"
+                app:iconTint="@color/white" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/bottomContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:background="?attr/colorSurface"
+        android:elevation="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPredict"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            app:cornerRadius="16dp"
+            android:backgroundTint="@color/gemini_blue"
+            android:textColor="@color/white"
+            android:enabled="false"
+            android:text="Analyzing Data..."/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRetryPrediction"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Retry Prediction"
+            android:visibility="gone"
+            app:cornerRadius="16dp"
+            app:backgroundTint="@color/gemini_blue"
+            android:textColor="@color/white"
+            app:icon="@drawable/ic_refresh"
+            app:iconTint="@color/white" />
+
+        <TextView
+            android:id="@+id/tvAiDisclaimer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:alpha="0.6"
+            android:text="Ledger Ai can make mistakes, so double-check it"
+            android:textAlignment="center"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+
+    <!-- Pie base -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="
+            M11,2
+            A10,10 0 1,0 21,12
+            H11
+            Z" />
+
+    <!-- Pie slice -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="
+            M13,2
+            V11
+            H22
+            A9,9 0 0,0 13,2
+            Z" />
+</vector>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" >
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- For Android 12 and below -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- For Android 13+ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SmartLedger" >
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <receiver
+            android:name=".util.MilkNotificationReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="ACTION_MILK_REPLY" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".util.MilkBootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.App.Starting"> <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        </activity>
+
+        <activity android:name=".activity.ExpenseActivity" android:exported="false" />
+        <activity android:name=".activity.AddEditExpenseActivity" android:exported="false" />
+        <activity android:name=".activity.ViewExpenseActivity" android:exported="false" />
+
+        <activity android:name=".activity.ElectricityActivity" android:exported="false" />
+        <activity android:name=".activity.AddEditElectricityActivity" android:exported="false" />
+        <activity android:name=".activity.ViewElectricityActivity" android:exported="false" />
+
+        <activity android:name=".activity.MilkActivity" android:exported="false" />
+        <activity android:name=".activity.ViewMilkActivity" android:exported="false" />
+
+        <activity
+            android:name=".activity.AnalyticsActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+
+        <activity
+            android:name=".activity.AiInsightActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+
+        <activity android:name=".activity.CalculatorActivity" android:exported="false" android:label="Calculator" />
+        <activity android:name=".activity.TrashBinActivity" android:exported="false" />
+        <activity
+            android:name=".activity.ImageViewerActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:hardwareAccelerated="true" />
+
+    </application>
+</manifest>

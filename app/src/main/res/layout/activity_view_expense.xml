@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:colorBackground"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/topAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/teal_main"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="Expense Details"
+        app:titleTextColor="@color/white">
+
+        <ImageView
+            android:id="@+id/btnDeleteHeader"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:src="@drawable/ic_delete"
+            android:layout_gravity="end|center_vertical"
+            android:scaleType="center"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/white"
+            android:contentDescription="Delete"
+            android:layout_marginEnd="10dp" />
+
+
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView android:id="@+id/detailTitle" style="@style/DetailHeader" android:text="Title" />
+            <TextView android:id="@+id/detailTvTitle" style="@style/DetailValue" android:text="Grocery Shopping" />
+
+            <TextView android:id="@+id/detailAmount" style="@style/DetailHeader" android:text="Amount" />
+            <TextView android:id="@+id/detailTvAmount" style="@style/DetailValue" android:text="Rs 500.00" />
+
+            <TextView android:id="@+id/detailDate" style="@style/DetailHeader" android:text="Date" />
+            <TextView android:id="@+id/detailTvDate" style="@style/DetailValue" android:text="01 Jan 2025" />
+
+            <TextView android:id="@+id/detailDescription" style="@style/DetailHeader" android:text="Description" />
+            <TextView android:id="@+id/detailTvDescription" style="@style/DetailValue" android:text="Bought milk and bread." />
+
+            <TextView android:id="@+id/detailPhotos" style="@style/DetailHeader" android:text="Photos" />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/detailRvPhotos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"
+                android:padding="4dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnModify"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:backgroundTint="@color/teal_main"
+        android:padding="12dp"
+        android:text="Modify Expense"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+</LinearLayout>

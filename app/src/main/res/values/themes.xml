@@ -1,0 +1,73 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.SmartLedger" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/teal_main</item>
+
+        <item name="colorOutline">#757575</item>
+        <item name="colorOnSurfaceVariant">#757575</item>
+
+        <item name="windowActionModeOverlay">true</item>
+        <item name="actionModeStyle">@style/CustomActionMode</item>
+    </style>
+
+    <style name="CustomActionMode" parent="Widget.AppCompat.ActionMode">
+        <item name="background">@color/teal_dark</item>
+
+        <item name="actionModeCloseDrawable">@drawable/ic_close</item>
+        <item name="android:actionModeCloseDrawable">@drawable/ic_close</item>
+        <item name="closeIcon">@drawable/ic_close</item>
+
+        <item name="titleTextStyle">@style/ActionModeTitle</item>
+    </style>
+
+    <style name="ActionModeTitle" parent="TextAppearance.AppCompat.Widget.ActionMode.Title">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="Theme.App.PopupOverlay" parent="ThemeOverlay.MaterialComponents.Light">
+        <item name="android:textColor">@color/black</item>
+        <item name="android:colorBackground">@color/white</item>
+    </style>
+
+    <style name="App.MaterialDatePicker" parent="ThemeOverlay.Material3.MaterialCalendar">
+        <item name="materialCalendarHeaderLayout">@style/App.MaterialDatePicker.Header</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorPrimary">@color/teal_main</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryVariant">@color/teal_main</item>
+    </style>
+
+    <style name="App.MaterialDatePicker.Header" parent="Widget.Material3.MaterialCalendar.HeaderLayout">
+        <item name="android:background">@color/teal_main</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorOnSurfaceVariant">@color/white</item>
+    </style>
+
+    <style name="Theme.SmartLedger" parent="Base.Theme.SmartLedger" />
+
+    <style name="Theme.App.Starting" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:statusBarColor">@color/splash_bg</item>
+    </style>
+
+    <style name="Widget.App.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/selector_text_input_stroke</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+    </style>
+
+    <style name="DetailHeader">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:textColor">@color/teal_main</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="DetailValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+</resources>

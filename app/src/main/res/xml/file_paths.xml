@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- For saving images permanently in internal storage -->
+    <files-path
+        name="expense_images"
+        path="expense_images/" />
+
+    <!-- For temporary camera images in external cache -->
+    <external-cache-path
+        name="camera_images"
+        path="." />
+</paths>
