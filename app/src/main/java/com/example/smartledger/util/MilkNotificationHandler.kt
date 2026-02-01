@@ -51,6 +51,16 @@ class MilkMorningWorker(val context: Context, workerParams: WorkerParameters) : 
             it.monthIndex == monthIdx && it.year == year && !it.isDeleted
         }
 
+        // Inside MilkMorningWorker.doWork()
+        val todayDay = cal.get(Calendar.DAY_OF_MONTH)
+        val todayEntry = activeMonth?.dailyEntries?.find { it.day == todayDay }
+
+        if (todayEntry != null && todayEntry.liters > 0.0) {
+            // Already filled! Just schedule midnight and skip notification
+            MilkNotificationHandler.scheduleMidnightCheck(context)
+            return Result.success()
+        }
+
         // Safety Net: Month must exist and NOT be in trash
         if (activeMonth == null) {
             MilkNotificationHandler.scheduleMorningNotification(context)
@@ -134,11 +144,26 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
         val db = AppDatabase.getDatabase(context)
         val cal = Calendar.getInstance()
 
+        // At Midnight, we check "Yesterday"
+        cal.add(Calendar.DAY_OF_YEAR, -1)
+        val targetDay = cal.get(Calendar.DAY_OF_MONTH)
+        val monthIdx = cal.get(Calendar.MONTH)
+        val year = cal.get(Calendar.YEAR)
+
         val allRecords = withContext(Dispatchers.IO) { db.milkDao().getAllRaw() }
         val activeMonth = allRecords.find {
-            it.monthIndex == cal.get(Calendar.MONTH) && it.year == cal.get(Calendar.YEAR) && !it.isDeleted
+            it.monthIndex == monthIdx && it.year == year && !it.isDeleted
         }
 
+        // --- ROBUST CHECK ---
+        val yesterdayEntry = activeMonth?.dailyEntries?.find { it.day == targetDay }
+
+        if (yesterdayEntry != null && yesterdayEntry.liters > 0.0) {
+            MilkNotificationHandler.scheduleMorningNotification(context)
+            return Result.success()
+        }
+
+        // --- IF DATA IS MISSING, SHOW NOTIFICATION ---
         val contentIntent = Intent(context, com.example.smartledger.activity.ViewMilkActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("milk_data", activeMonth)
@@ -147,8 +172,9 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
             context, 101, contentIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        cal.add(Calendar.DAY_OF_YEAR, -1)
         val missedDate = SimpleDateFormat("dd MMM", Locale.getDefault()).format(cal.time)
+
+        // RESTORED VIBRATION PATTERN
         val missedPattern = longArrayOf(0, 500, 200, 500, 200, 500)
 
         val builder = NotificationCompat.Builder(context, MilkNotificationConstants.CHANNEL_ID)

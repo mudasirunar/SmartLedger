@@ -14,16 +14,19 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.WorkManager
 import com.example.smartledger.R
 import com.example.smartledger.adapter.MilkDailyAdapter
 import com.example.smartledger.data.AppDatabase
 import com.example.smartledger.data.MilkRecord
+import com.example.smartledger.util.MilkNotificationConstants
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 class ViewMilkActivity : AppCompatActivity() {
 
@@ -152,9 +155,7 @@ class ViewMilkActivity : AppCompatActivity() {
 
         // 4. Start new save job (Wait 1 second)
         saveJob = lifecycleScope.launch {
-            delay(1000) // Wait for 1 second of inactivity
-
-            // Recalculate final data
+            delay(1000)
             var finalLiters = 0.0
             record!!.dailyEntries.forEach { finalLiters += it.liters }
             val finalAmount = finalLiters * record!!.pricePerLiter
@@ -168,8 +169,14 @@ class ViewMilkActivity : AppCompatActivity() {
             // A. Save Local (Fast)
             withContext(Dispatchers.IO) {
                 db.milkDao().update(updatedRecord)
+                val today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+                val todayEntry = updatedRecord.dailyEntries.find { it.day == today }
+                if (todayEntry != null && todayEntry.liters > 0.0) {
+                    WorkManager.getInstance(applicationContext)
+                        .cancelUniqueWork(MilkNotificationConstants.WORK_NAME_MIDNIGHT)
+                }
             }
-            record = updatedRecord // Update memory reference
+            record = updatedRecord
         }
     }
 }
