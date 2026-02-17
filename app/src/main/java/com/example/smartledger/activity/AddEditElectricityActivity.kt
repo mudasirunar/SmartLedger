@@ -1,5 +1,6 @@
 package com.example.smartledger.activity
 
+import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.net.Uri
@@ -48,9 +49,10 @@ class AddEditElectricityActivity : AppCompatActivity() {
     private var initialStartUnits = ""
     private var initialEndUnits = ""
     private var initialAmount = ""
+    private var initialTotalUnits = ""
     private var initialStartDate: Long? = null
     private var initialEndDate: Long? = null
-    private val initialImagePaths = mutableListOf<String>()
+    private var initialImagePaths = mutableListOf<String>()
 
     private var startDate: Long? = null
     private var endDate: Long? = null
@@ -101,6 +103,9 @@ class AddEditElectricityActivity : AppCompatActivity() {
         setupPhotoLogic()
         populateData()
         updatePhotoCount()
+        if (existingRecord != null) {
+            captureInitialState()
+        }
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { handleBackAction() }
@@ -123,6 +128,7 @@ class AddEditElectricityActivity : AppCompatActivity() {
         }
     }
 
+    private var isUpdating = false
     private fun initViews() {
         val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
         setSupportActionBar(toolbar)
@@ -141,23 +147,31 @@ class AddEditElectricityActivity : AppCompatActivity() {
         rvPhotos = findViewById(R.id.rvPhotos)
         btnAddPhoto = findViewById(R.id.btnAddPhoto)
 
+
+        // --- SINGLE CONSOLIDATED WATCHER ---
+        val unitWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (isUpdating) return
+
+                // Clear errors on any input
+                etStartUnits.error = null
+                etEndUnits.error = null
+                etTotalUnits.error = null
+
+                syncUnits(s)
+            }
+        }
+
+        etStartUnits.addTextChangedListener(unitWatcher)
+        etEndUnits.addTextChangedListener(unitWatcher)
+        etTotalUnits.addTextChangedListener(unitWatcher)
+
+
         // Date Logic
         etStartDate.setOnClickListener { showDatePicker { date -> startDate = date; updateDateText(etStartDate, date) } }
         etEndDate.setOnClickListener { showDatePicker { date -> endDate = date; updateDateText(etEndDate, date) } }
-
-        // Auto-Calculate Total Units AND Clear Errors
-        val textWatcher = object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                calculateTotalUnits()
-                // FIX: Remove warning icons immediately when user types
-                etStartUnits.error = null
-                etEndUnits.error = null
-            }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        }
-        etStartUnits.addTextChangedListener(textWatcher)
-        etEndUnits.addTextChangedListener(textWatcher)
 
         btnAddPhoto.setOnClickListener {
             if (selectedImagePaths.size >= 3) {
@@ -170,20 +184,65 @@ class AddEditElectricityActivity : AppCompatActivity() {
         btnSave.setOnClickListener { validateAndSave() }
     }
 
-    private fun calculateTotalUnits() {
-        val s = etStartUnits.text.toString().toDoubleOrNull()
-        val e = etEndUnits.text.toString().toDoubleOrNull()
-        if (s != null && e != null) {
-            val total = e - s
-            // SMART FORMAT FOR AUTO-CALCULATION
-            if (total % 1.0 == 0.0) {
-                etTotalUnits.setText(total.toInt().toString())
-            } else {
-                etTotalUnits.setText(String.format("%.1f", total))
+    private fun syncUnits(source: Editable?) {
+        if (source == null || isUpdating) return
+        isUpdating = true
+
+        val start = etStartUnits.text.toString().toDoubleOrNull() ?: 0.0
+        val endStr = etEndUnits.text.toString()
+        val totalStr = etTotalUnits.text.toString()
+
+        val end = endStr.toDoubleOrNull()
+        val total = totalStr.toDoubleOrNull()
+
+        try {
+            val sourceHash = source.hashCode()
+
+            when {
+                // IF typing in END
+                etEndUnits.text?.hashCode() == sourceHash -> {
+                    if (end != null) {
+                        val newValue = formatValue(end - start)
+                        if (totalStr != newValue) {
+                            etTotalUnits.setText(newValue)
+                        }
+                    } else {
+                        // Perfect App Logic: If End is cleared, clear Total
+                        etTotalUnits.setText("")
+                    }
+                }
+
+                // IF typing in TOTAL
+                etTotalUnits.text?.hashCode() == sourceHash -> {
+                    if (total != null) {
+                        val newValue = formatValue(start + total)
+                        if (endStr != newValue) {
+                            etEndUnits.setText(newValue)
+                        }
+                    } else {
+                        // Perfect App Logic: If Total is cleared, clear End
+                        etEndUnits.setText("")
+                    }
+                }
+
+                // IF typing in START
+                etStartUnits.text?.hashCode() == sourceHash -> {
+                    if (end != null) {
+                        val newValue = formatValue(end - start)
+                        if (totalStr != newValue) {
+                            etTotalUnits.setText(newValue)
+                        }
+                    }
+                }
             }
-        } else {
-            etTotalUnits.setText("")
+        } finally {
+            isUpdating = false
         }
+    }
+
+    // Helper to keep the UI clean (removes .0 from whole numbers)
+    private fun formatValue(value: Double): String {
+        return if (value % 1.0 == 0.0) value.toInt().toString() else String.format("%.1f", value)
     }
 
     private fun updateDateText(view: TextInputEditText, date: Long) {
@@ -238,7 +297,7 @@ class AddEditElectricityActivity : AppCompatActivity() {
         val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
         val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
         val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btnDialogCancel)
+        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
         val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
 
         tvTitle.text = if(isNew) "Add Record" else "Update Record"
@@ -267,8 +326,10 @@ class AddEditElectricityActivity : AppCompatActivity() {
                     }
                 }
                 // Back on Main Thread
-                Toast.makeText(this@AddEditElectricityActivity, "Record Added", Toast.LENGTH_SHORT).show()
-                setResult(RESULT_OK)
+                val resultIntent = Intent().apply {
+                    putExtra("toast_message", if (isNew) "Record Added" else "Record Updated")
+                }
+                setResult(RESULT_OK, resultIntent)
                 finish()
             }
         }
@@ -376,18 +437,26 @@ class AddEditElectricityActivity : AppCompatActivity() {
         btnAddPhoto.text = if(selectedImagePaths.size >= 3) "Limit Reached" else "Add"
     }
 
+    private fun captureInitialState() {
+        initialStartDate = startDate
+        initialEndDate = endDate
+        initialStartUnits = etStartUnits.text.toString()
+        initialEndUnits = etEndUnits.text.toString()
+        initialTotalUnits = etTotalUnits.text.toString()
+        initialAmount = etAmount.text.toString()
+        initialImagePaths = selectedImagePaths.toMutableList()
+    }
+
     private fun populateData() {
-        existingRecord?.let {
-            // Save Initial State for comparison later
+        if (existingRecord != null) {
+            // --- LOGIC FOR EDITING (Stays the same as your current code) ---
+            val it = existingRecord!!
             initialStartDate = it.startDate
             initialEndDate = it.endDate
             initialStartUnits = it.startUnits?.toString() ?: ""
             initialEndUnits = it.endUnits?.toString() ?: ""
             initialAmount = it.amount?.toString() ?: ""
-            initialImagePaths.clear()
-            initialImagePaths.addAll(it.imagePaths)
 
-            // Set UI values
             startDate = it.startDate
             endDate = it.endDate
             updateDateText(etStartDate, it.startDate)
@@ -395,41 +464,61 @@ class AddEditElectricityActivity : AppCompatActivity() {
             etStartUnits.setText(initialStartUnits)
             etEndUnits.setText(initialEndUnits)
             etAmount.setText(initialAmount)
-            calculateTotalUnits()
+            val s = it.startUnits ?: 0.0
+            val e = it.endUnits ?: 0.0
+            etTotalUnits.setText(formatValue(e - s))
             btnSave.text = "Update Record"
 
-            // Sync Images
             if (selectedImagePaths.isEmpty()) {
                 selectedImagePaths.addAll(it.imagePaths)
             }
             thumbnailAdapter.notifyDataSetChanged()
-            updatePhotoCount()
-        } ?: run {
-            initialStartDate = startDate
-            initialEndDate = endDate
+        } else {
+            // --- SMART PRE-FILL FOR NEW RECORDS ---
+            lifecycleScope.launch(Dispatchers.IO) {
+                val lastRecord = db.electricityDao().getLastActiveRecord()
+
+                withContext(Dispatchers.Main) {
+                    lastRecord?.let { last ->
+                        // 1. Pre-fill Start Units from the previous End Units
+                        val lastEndUnits = last.endUnits?.toString() ?: ""
+                        etStartUnits.setText(lastEndUnits)
+
+                        // 2. Set Start Date as Day After the previous End Date
+                        val nextStartDate = last.endDate + (24 * 60 * 60 * 1000)
+                        startDate = nextStartDate
+                        updateDateText(etStartDate, nextStartDate)
+
+                        // 3. NEW: Predict End Date (Start Date + 30 Days)
+                        val thirtyDaysInMs = 30L * 24 * 60 * 60 * 1000
+                        val predictedEndDate = nextStartDate + thirtyDaysInMs
+                        endDate = predictedEndDate
+                        updateDateText(etEndDate, predictedEndDate)
+
+                        // 4. Focus on End Units so the user can just start typing the number
+                        etEndUnits.requestFocus()
+                    }
+                    captureInitialState()
+                }
+            }
         }
+        updatePhotoCount()
     }
 
+
     private fun hasUnsavedChanges(): Boolean {
-        // Current UI values
-        val currentStartUnits = etStartUnits.text.toString()
-        val currentEndUnits = etEndUnits.text.toString()
+        val currentStart = etStartUnits.text.toString()
+        val currentEnd = etEndUnits.text.toString()
+        val currentTotal = etTotalUnits.text.toString()
         val currentAmount = etAmount.text.toString()
 
-        // Compare against the "Initial State" we captured in populateData
         val isDateChanged = startDate != initialStartDate || endDate != initialEndDate
-        val isUnitsChanged = currentStartUnits != initialStartUnits || currentEndUnits != initialEndUnits
+        val isUnitsChanged = currentStart != initialStartUnits ||
+                currentEnd != initialEndUnits ||
+                currentTotal != initialTotalUnits
         val isAmountChanged = currentAmount != initialAmount
         val isPhotosChanged = selectedImagePaths != initialImagePaths
 
-        // If it's a NEW record, just check if any field is NOT empty
-        if (existingRecord == null) {
-            return startDate != null || endDate != null ||
-                    currentStartUnits.isNotEmpty() || currentEndUnits.isNotEmpty() ||
-                    currentAmount.isNotEmpty() || selectedImagePaths.isNotEmpty()
-        }
-
-        // If it's an EXISTING record, check if anything differs from the original
         return isDateChanged || isUnitsChanged || isAmountChanged || isPhotosChanged
     }
 

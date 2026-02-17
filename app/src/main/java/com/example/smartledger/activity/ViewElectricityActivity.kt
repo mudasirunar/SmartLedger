@@ -34,7 +34,11 @@ class ViewElectricityActivity : AppCompatActivity() {
 
     private val editLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            finish() // Only finish the view activity if the record was actually updated
+            // Extract the specific message (Record Added or Record Updated)
+            val message = result.data?.getStringExtra("toast_message") ?: "Record Updated"
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+            finish() // Close the view activity so the main list refreshes
         }
     }
 
@@ -83,36 +87,33 @@ class ViewElectricityActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tvDetailEndUnits).text = fmt(record!!.endUnits)
         findViewById<TextView>(R.id.tvDetailTotalUnits).text = "${fmt(record!!.totalUnits)} Units"
         findViewById<TextView>(R.id.tvDetailAmount).text = "Rs %.2f".format(record!!.amount ?: 0.0)
+        val totalUnits = record!!.totalUnits ?: 0.0
+        val amount = record!!.amount ?: 0.0
 
-        // 1. Use the correct ID from your XML (detailRvPhotos)
-        // Ensure this ID matches your new XML ID
+        val unitPrice = if (totalUnits > 0) amount / totalUnits else 0.0
+        findViewById<TextView>(R.id.tvDetailUnitPrice).text = "Rs %.2f / Unit".format(unitPrice)
+
         val rvPhotos = findViewById<RecyclerView>(R.id.detailRvPhotos)
+        val tvPhotoHeader = findViewById<View>(R.id.detailPhotos)
+        val images = record?.imagePaths ?: emptyList()
 
-        rvPhotos?.apply {
-            // Optimization: Tell Android the size won't change drastically
-            setHasFixedSize(true)
+        if (images.isEmpty()) {
+            tvPhotoHeader.visibility = View.GONE
+            rvPhotos.visibility = View.GONE
+        } else {
+            tvPhotoHeader.visibility = View.VISIBLE
+            rvPhotos.visibility = View.VISIBLE
 
-            // Set LayoutManager
-            layoutManager = GridLayoutManager(this@ViewElectricityActivity, 2)
-
-            val images = record?.imagePaths ?: emptyList()
-
-            if (images.isEmpty()) {
-                findViewById<View>(R.id.detailPhotos)?.visibility = View.GONE
-                visibility = View.GONE
-            } else {
-                findViewById<View>(R.id.detailPhotos)?.visibility = View.VISIBLE
-                visibility = View.VISIBLE
-
-                val pAdapter = PhotoViewAdapter(images) { imagePath ->
+            rvPhotos.apply {
+                setHasFixedSize(true)
+                layoutManager = GridLayoutManager(this@ViewElectricityActivity, 2)
+                adapter = PhotoViewAdapter(images) { imagePath ->
                     val pos = images.indexOf(imagePath)
                     val intent = Intent(this@ViewElectricityActivity, ImageViewerActivity::class.java)
                     intent.putStringArrayListExtra("image_paths", ArrayList(images))
                     intent.putExtra("position", pos)
                     startActivity(intent)
                 }
-
-                adapter = pAdapter
             }
         }
     }

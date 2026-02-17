@@ -99,6 +99,9 @@
             <TextView style="@style/DetailHeader" android:text="Amount" />
             <TextView android:id="@+id/tvDetailAmount" style="@style/DetailValue" android:text="Rs 5000.00" />
 
+            <TextView style="@style/DetailHeader" android:text="Price per Unit" />
+            <TextView android:id="@+id/tvDetailUnitPrice" style="@style/DetailValue" android:text="Rs 0.00 / Unit" />
+
             <TextView android:id="@+id/detailPhotos" style="@style/DetailHeader" android:text="Photos" />
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/detailRvPhotos"

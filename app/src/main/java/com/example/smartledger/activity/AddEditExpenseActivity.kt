@@ -1,6 +1,7 @@
 package com.example.smartledger.activity
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.net.Uri
@@ -395,8 +396,16 @@ class AddEditExpenseActivity : AppCompatActivity() {
                         db.expenseDao().updateExpense(expense)
                     }
                 }
-                Toast.makeText(this@AddEditExpenseActivity, "Record Added", Toast.LENGTH_SHORT).show()
-                setResult(RESULT_OK)
+                val resultIntent = Intent()
+                val isEdit = intent.hasExtra("expense_data") // Or however you check for edit mode
+
+                if (isEdit) {
+                    resultIntent.putExtra("toast_message", "Record Updated")
+                } else {
+                    resultIntent.putExtra("toast_message", "Record Added")
+                }
+
+                setResult(RESULT_OK, resultIntent)
                 finish()
             }
         }

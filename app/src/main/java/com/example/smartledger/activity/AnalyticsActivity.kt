@@ -482,9 +482,17 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             val totalElec = electricity.filter { !it.isDeleted }.sumOf { it.amount ?: 0.0 }
             val grandTotal = totalExpense + totalMilkCost + totalElec
 
+            val calendar = Calendar.getInstance()
+            val currentMonthIdx = calendar.get(Calendar.MONTH)
+            val currentYear = calendar.get(Calendar.YEAR)
+
             val elecList = electricity.filter { !it.isDeleted }.sortedBy { it.endDate }
-            val milkList = milkRecords.filter { !it.isDeleted }.sortedWith(compareBy({ it.year }, { it.monthIndex }))
             val expenseList = expenses.filter { !it.isDeleted }.sortedBy { it.date }
+            val milkList = milkRecords.filter { !it.isDeleted }
+                .sortedWith(compareBy({ it.year }, { it.monthIndex }))
+            val historicalMilkList = milkList.filter {
+                !(it.monthIndex == currentMonthIdx && it.year == currentYear)
+            }
 
             withContext(Dispatchers.Main) {
                 setupPieChart(totalExpense.toFloat(), totalMilkCost.toFloat(), totalElec.toFloat(), grandTotal.toFloat())
@@ -517,8 +525,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
                 if (hasMilkData) {
                     milkBtnAi.setOnClickListener {
-                        val summary = AiHelper.summarizeMilk(milkList)
-                        startAiInsight("Milk", summary, milkList.size)
+                        val summary = AiHelper.summarizeMilk(historicalMilkList)
+                        startAiInsight("Milk", summary, historicalMilkList.size)
                     }
                 }
 
@@ -1069,11 +1077,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         navigationView.setNavigationItemSelectedListener(this)
     }
 
-    override fun onResume() {
-        super.onResume()
-        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_analytics)
-    }
-
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         drawerLayout.closeDrawer(GravityCompat.START)
         Handler(Looper.getMainLooper()).postDelayed({
@@ -1113,7 +1116,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     startActivity(intent)
                     finish()
-                    Toast.makeText(this, "Manage this from Dashboard", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
                 }
             }
         }, 250)
@@ -1126,6 +1129,39 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setupHeader()
+        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_analytics)
+    }
+
+    private fun setupHeader() {
+        val navView = findViewById<NavigationView>(R.id.navigationView)
+        val headerView = navView.getHeaderView(0)
+
+        // Use findViewById on the headerView, not the activity
+        val tvName = headerView.findViewById<TextView>(R.id.headerName)
+        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
+
+        val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
+
+        // 1. Load the data
+        tvName.text = prefs.getString("user_name", "Enter your name")
+        tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
+
+        // 2. The Safety Check: Only allow editing if we are in MainActivity
+        if (this is MainActivity) {
+            tvName.setOnClickListener {
+                // This call is now safe because 'this' is confirmed as MainActivity
+                this.showEditNameDialog(tvName)
+            }
+        } else {
+            // In other activities, remove the edit icon/arrow if you added one
+            tvName.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+            tvName.setOnClickListener(null)
         }
     }
 }

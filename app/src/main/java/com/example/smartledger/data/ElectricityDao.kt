@@ -24,6 +24,9 @@ interface ElectricityDao {
     @Query("SELECT * FROM electricity_records WHERE isDeleted = 0 ORDER BY totalUnits ASC")
     fun getAllByUnitsAsc(): Flow<List<Electricity>>
 
+    @Query("SELECT * FROM electricity_records WHERE isDeleted = 0 ORDER BY endDate DESC LIMIT 1")
+    suspend fun getLastActiveRecord(): Electricity?
+
     // Trash Queries
     @Query("SELECT * FROM electricity_records WHERE isDeleted = 1")
     fun getTrashRecords(): Flow<List<Electricity>>

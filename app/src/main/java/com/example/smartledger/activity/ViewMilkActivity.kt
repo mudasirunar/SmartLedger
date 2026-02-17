@@ -1,5 +1,6 @@
 package com.example.smartledger.activity
 
+import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -27,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
+import android.app.NotificationManager
 
 class ViewMilkActivity : AppCompatActivity() {
 
@@ -174,6 +176,8 @@ class ViewMilkActivity : AppCompatActivity() {
                 if (todayEntry != null && todayEntry.liters > 0.0) {
                     WorkManager.getInstance(applicationContext)
                         .cancelUniqueWork(MilkNotificationConstants.WORK_NAME_MIDNIGHT)
+                    val manager = getSystemService(NotificationManager::class.java)
+                    manager?.cancel(MilkNotificationConstants.NOTIFICATION_ID)
                 }
             }
             record = updatedRecord

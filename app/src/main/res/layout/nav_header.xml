@@ -19,16 +19,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Guest User"
+        android:text="Enter your name"
         android:textAppearance="@style/TextAppearance.AppCompat.Body1"
         android:textColor="@color/white"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:drawableEnd="@drawable/ic_edit_small"
+        android:drawablePadding="8dp" />
 
     <TextView
+        android:id="@+id/tvLastBackup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Manage your accounts easily"
+        android:layout_marginTop="4dp"
+        android:text="Last backup: Never"
         android:textColor="#E0E0E0"
-        android:textSize="12sp"/>
+        android:textSize="11sp"/>
 
 </LinearLayout>

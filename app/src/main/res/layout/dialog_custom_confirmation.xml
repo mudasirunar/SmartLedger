@@ -39,6 +39,15 @@
             android:textSize="14sp"
             android:gravity="center_horizontal"/>
 
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/dialogProgressBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:indicatorColor="@color/teal_main"
+            app:trackCornerRadius="4dp" />
         <!-- ITEM DETAILS CONTAINER (Visible for Add/Edit/Single Delete) -->
         <LinearLayout
             android:id="@+id/containerDetails"

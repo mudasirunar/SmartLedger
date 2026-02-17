@@ -34,7 +34,10 @@ class ViewExpenseActivity : AppCompatActivity() {
 
     private val editLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            finish()
+            // Get the "Record Updated" message
+            val message = result.data?.getStringExtra("toast_message") ?: "Record Updated"
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            finish() // Return to the list after showing the toast
         }
     }
 
@@ -82,36 +85,38 @@ class ViewExpenseActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.detailTvTitle).text = expense!!.title
         findViewById<TextView>(R.id.detailTvAmount).text = "Rs %.2f".format(expense!!.amount)
         findViewById<TextView>(R.id.detailTvDate).text = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(expense!!.date)
-        findViewById<TextView>(R.id.detailTvDescription).text = expense!!.description
+        val desc = expense!!.description
+        if (desc.isNullOrEmpty()) {
+            findViewById<View>(R.id.detailDescription).visibility = View.GONE
+            findViewById<View>(R.id.detailTvDescription).visibility = View.GONE
+        } else {
+            findViewById<TextView>(R.id.detailTvDescription).text = desc
+        }
 
-        // --- RESTORED GRID LAYOUT HERE ---
+        // Dynamic Photo Section Visibility
         val rvPhotos = findViewById<RecyclerView>(R.id.detailRvPhotos)
-        rvPhotos.setHasFixedSize(true) // Crucial: tells Android item sizes don't change
-        rvPhotos.setItemViewCacheSize(10) // Keeps more thumbnails ready in memory
-        rvPhotos.layoutManager = GridLayoutManager(this, 2)
-
+        val tvPhotoHeader = findViewById<View>(R.id.detailPhotos)
         val images = expense?.imagePaths ?: emptyList()
+
         if (images.isEmpty()) {
-            findViewById<View>(R.id.detailPhotos).visibility = View.GONE
+            tvPhotoHeader.visibility = View.GONE
+            rvPhotos.visibility = View.GONE
+        } else {
+            tvPhotoHeader.visibility = View.VISIBLE
+            rvPhotos.visibility = View.VISIBLE
+
+            rvPhotos.apply {
+                setHasFixedSize(true)
+                layoutManager = GridLayoutManager(this@ViewExpenseActivity, 2)
+                adapter = PhotoViewAdapter(images) { imagePath ->
+                    val position = images.indexOf(imagePath)
+                    val intent = Intent(this@ViewExpenseActivity, ImageViewerActivity::class.java)
+                    intent.putStringArrayListExtra("image_paths", ArrayList(images))
+                    intent.putExtra("position", position)
+                    startActivity(intent)
+                }
+            }
         }
-
-        // ... inside setupUI() ...
-
-        photoAdapter = PhotoViewAdapter(images) { imagePath ->
-            // 1. Calculate the position of the clicked image
-            val position = images.indexOf(imagePath)
-
-            val intent = Intent(this, ImageViewerActivity::class.java)
-
-            // 2. Pass the FULL LIST (so we can swipe)
-            intent.putStringArrayListExtra("image_paths", ArrayList(images))
-
-            // 3. Pass the POSITION (so we open the correct image)
-            intent.putExtra("position", position)
-
-            startActivity(intent)
-        }
-        rvPhotos.adapter = photoAdapter
     }
 
     private fun showDeleteConfirmationDialog(expense: Expense) {

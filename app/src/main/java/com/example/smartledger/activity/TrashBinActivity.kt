@@ -9,6 +9,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -388,11 +389,6 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         return super.onOptionsItemSelected(item)
     }
 
-    // --- Navigation ---
-    override fun onResume() {
-        super.onResume()
-        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_trash)
-    }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         drawerLayout.closeDrawer(GravityCompat.START)
@@ -434,14 +430,12 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
                 R.id.nav_calculator -> {
                     startActivity(Intent(this, CalculatorActivity::class.java))
                 }
-                R.id.nav_backup,
-                R.id.nav_restore,
-                R.id.nav_wipe_data -> {
+                R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
                     val intent = Intent(this, MainActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     startActivity(intent)
                     finish()
-                    Toast.makeText(this, "Manage this setting from Dashboard", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
                 }
             }
         }, 250)
@@ -469,5 +463,38 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         if (ev != null) gestureDetector.onTouchEvent(ev)
         return super.dispatchTouchEvent(ev)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setupHeader()
+        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_trash)
+    }
+
+    private fun setupHeader() {
+        val navView = findViewById<NavigationView>(R.id.navigationView)
+        val headerView = navView.getHeaderView(0)
+
+        // Use findViewById on the headerView, not the activity
+        val tvName = headerView.findViewById<TextView>(R.id.headerName)
+        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
+
+        val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
+
+        // 1. Load the data
+        tvName.text = prefs.getString("user_name", "Enter your name")
+        tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
+
+        // 2. The Safety Check: Only allow editing if we are in MainActivity
+        if (this is MainActivity) {
+            tvName.setOnClickListener {
+                // This call is now safe because 'this' is confirmed as MainActivity
+                this.showEditNameDialog(tvName)
+            }
+        } else {
+            // In other activities, remove the edit icon/arrow if you added one
+            tvName.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+            tvName.setOnClickListener(null)
+        }
     }
 }

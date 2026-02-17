@@ -161,6 +161,16 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val btnAdd = dialogView.findViewById<TextView>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
 
+        // Fetch the latest price from your records in the background
+        lifecycleScope.launch(Dispatchers.IO) {
+            val lastRecord = db.milkDao().getAllRaw().firstOrNull() // Get most recent
+            val lastPrice = lastRecord?.pricePerLiter?.toInt()?.toString() ?: "220"
+
+            withContext(Dispatchers.Main) {
+                etPrice.setText(lastPrice)
+            }
+        }
+
         // --- SETUP SPINNER ---
         val months = arrayOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
 
@@ -390,13 +400,6 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    // --- Navigation & Gestures ---
-    override fun onResume() {
-        super.onResume()
-        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_milk)
-    }
-
-    // Inside MilkActivity.kt
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         drawerLayout.closeDrawer(GravityCompat.START)
@@ -436,14 +439,12 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 R.id.nav_calculator -> {
                     startActivity(Intent(this, CalculatorActivity::class.java))
                 }
-                R.id.nav_backup,
-                R.id.nav_restore,
-                R.id.nav_wipe_data -> {
+                R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
                     val intent = Intent(this, MainActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     startActivity(intent)
                     finish()
-                    Toast.makeText(this, "Manage this setting from Dashboard", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
                 }
             }
         }, 250)
@@ -471,5 +472,38 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         if (ev != null) gestureDetector.onTouchEvent(ev)
         return super.dispatchTouchEvent(ev)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        setupHeader()
+        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_milk)
+    }
+
+    private fun setupHeader() {
+        val navView = findViewById<NavigationView>(R.id.navigationView)
+        val headerView = navView.getHeaderView(0)
+
+        // Use findViewById on the headerView, not the activity
+        val tvName = headerView.findViewById<TextView>(R.id.headerName)
+        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
+
+        val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
+
+        // 1. Load the data
+        tvName.text = prefs.getString("user_name", "Enter your name")
+        tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
+
+        // 2. The Safety Check: Only allow editing if we are in MainActivity
+        if (this is MainActivity) {
+            tvName.setOnClickListener {
+                // This call is now safe because 'this' is confirmed as MainActivity
+                this.showEditNameDialog(tvName)
+            }
+        } else {
+            // In other activities, remove the edit icon/arrow if you added one
+            tvName.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+            tvName.setOnClickListener(null)
+        }
     }
 }
