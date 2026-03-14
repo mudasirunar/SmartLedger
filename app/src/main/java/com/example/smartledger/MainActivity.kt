@@ -23,13 +23,23 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
-import com.example.smartledger.activity.*
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.smartledger.activity.AnalyticsActivity
+import com.example.smartledger.activity.CalculatorActivity
+import com.example.smartledger.activity.CreateCustomLedgerActivity
+import com.example.smartledger.activity.ElectricityActivity
+import com.example.smartledger.activity.ExpenseActivity
+import com.example.smartledger.activity.GenericLedgerActivity
+import com.example.smartledger.activity.MilkActivity
+import com.example.smartledger.activity.TrashBinActivity
+import com.example.smartledger.adapter.DashboardAdapter
 import com.example.smartledger.data.AppDatabase
+import com.example.smartledger.data.DashboardTile
 import com.example.smartledger.data.RestoreResult
 import com.example.smartledger.util.BackupManager
 import com.example.smartledger.util.MilkNotificationHandler
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -44,11 +54,11 @@ import kotlin.math.abs
 
 
 private const val PREFS_NAME = "SmartLedgerPrefs"
-private const val KEY_USER_NAME = "user_name"
 private const val KEY_LAST_BACKUP = "last_backup"
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private lateinit var drawerLayout: DrawerLayout
+    private lateinit var navigationView: NavigationView
     private lateinit var gestureDetector: GestureDetector
     private val db by lazy { AppDatabase.getDatabase(this) }
     private val handler = Handler(Looper.getMainLooper())
@@ -56,24 +66,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var isRestoreCancelled = false
     private var isBackupCancelled = false
 
-    // 1. For Local Backup (SAF Create)
+    // 1. For Local Backup
     private val localBackupLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let { startBackupProcess(it) }
     }
 
-    // 2. For Local Restore (SAF Open)
+    // 2. For Local Restore
     private val localRestoreLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { startRestoreProcess(uri) }
     }
 
-    // 3. For Drive Restore (Targets the Drive App Result)
+    // 3. For Drive Restore
     private val driveRestoreLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
+        if (result.resultCode == RESULT_OK) {
             result.data?.data?.let { uri -> startRestoreProcess(uri) }
         }
     }
 
-    // Launcher to detect when user returns from the Drive app
     private val driveBackupIntentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         Toast.makeText(this, "Backup was sent to Google Drive", Toast.LENGTH_SHORT).show()
     }
@@ -98,18 +107,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         checkNotificationPermission()
         setupWindowInsets()
         setupNavigation()
-        setupTiles()
+        setupDynamicDashboard()
         setupGestures()
         startClock()
         setupHeader()
+        observeCustomLedgers()
+
+        val fabAnalytics = findViewById<ExtendedFloatingActionButton>(R.id.btnAnalytics)
+
+        fabAnalytics.setOnClickListener {
+            val intent = Intent(this@MainActivity, AnalyticsActivity::class.java)
+            startActivity(intent)
+        }
 
         lifecycleScope.launch(Dispatchers.IO) {
             val fifteenDaysAgo = System.currentTimeMillis() - java.util.concurrent.TimeUnit.DAYS.toMillis(15)
 
-            // Clean all 3 tables
             db.expenseDao().deleteExpiredTrash(fifteenDaysAgo)
             db.electricityDao().deleteExpiredTrash(fifteenDaysAgo)
             db.milkDao().deleteExpiredTrash(fifteenDaysAgo)
+            db.customLedgerDao().deleteExpiredTrash(fifteenDaysAgo)
+            db.customLedgerDao().autoCleanExpiredLedgers(fifteenDaysAgo)
         }
     }
 
@@ -118,16 +136,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val permission = android.Manifest.permission.POST_NOTIFICATIONS
             when {
                 ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED -> {
-                    // Already granted
                     MilkNotificationHandler.scheduleMorningNotification(this)
                 }
                 else -> {
-                    // Request it
                     requestPermissionLauncher.launch(permission)
                 }
             }
         } else {
-            // Below Android 13, permission is granted at install time
             MilkNotificationHandler.scheduleMorningNotification(this)
         }
     }
@@ -140,11 +155,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
 
-        // Load Name & Backup Date
         tvName.text = prefs.getString("user_name", "Enter your name")
         tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
 
-        // Click to edit (Dashboard only)
         if (this is MainActivity) {
             tvName.setOnClickListener {
                 showEditNameDialog(tvName)
@@ -161,7 +174,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val btnCancel = dialogView.findViewById<TextView>(R.id.btnDialogCancel)
         val btnSave = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
 
-        // Pre-fill existing name if available
         val current = nameTextView.text.toString()
         if (current != "Enter your name") etName.setText(current)
 
@@ -172,17 +184,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (newName.isNotEmpty()) {
                 val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
                 val isFirstTime = prefs.getString("user_name", null) == null
-
-                // Save to memory
                 prefs.edit().putString("user_name", newName).apply()
-
-                // Refresh the Drawer UI immediately
                 setupHeader()
-
-                // Dynamic Toast based on first-time entry or update
                 val toastMsg = if (isFirstTime) "Username Added" else "Username Updated"
                 Toast.makeText(this@MainActivity, toastMsg, Toast.LENGTH_SHORT).show()
-
                 dialog.dismiss()
             } else {
                 etName.error = "Please enter a name"
@@ -191,7 +196,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         dialog.show()
 
-        // Force keyboard to open
         etName.requestFocus()
         Handler(Looper.getMainLooper()).postDelayed({
             val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
@@ -200,52 +204,54 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        // 1. Determine if this is a Destination (Activity) or an Action (Dialog)
-        val isAction = item.itemId == R.id.nav_backup ||
-                item.itemId == R.id.nav_restore ||
-                item.itemId == R.id.nav_wipe_data
-
-        // 2. Close the drawer immediately
+        val id = item.itemId
         drawerLayout.closeDrawer(GravityCompat.START)
 
-        // 3. Handle the logic
+        val isAction = id == R.id.nav_backup || id == R.id.nav_restore || id == R.id.nav_wipe_data
         if (isAction) {
-            // Actions happen immediately (No delay needed because they open Dialogs)
-            when (item.itemId) {
-                R.id.nav_backup -> {
-                    showChoiceDialog("Backup Storage", "Choose your backup destination:") { isDrive ->
-                        if (isDrive) performDriveBackup() else performLocalBackup()
-                    }
-                    return false
-                }
-                R.id.nav_restore -> {
-                    showChoiceDialog("Restore Source", "Select where your backup is stored:") { isDrive ->
-                        if (isDrive) performDriveRestore() else performLocalRestore()
-                    }
-                    return false
-                }
-                R.id.nav_wipe_data -> handleWipeData()
-            }
-            return false // Do not move the selection "pill" to these actions
-        } else {
-            // Destinations: Navigate with a slight delay for smooth drawer closing
-            handler.postDelayed({
-                val intent = when (item.itemId) {
-                    R.id.nav_electricity -> Intent(this, ElectricityActivity::class.java)
-                    R.id.nav_milk -> Intent(this, MilkActivity::class.java)
-                    R.id.nav_expenses -> Intent(this, ExpenseActivity::class.java)
-                    R.id.nav_calculator -> Intent(this, CalculatorActivity::class.java)
-                    R.id.nav_trash -> Intent(this, TrashBinActivity::class.java)
-                    R.id.nav_analytics -> Intent(this, AnalyticsActivity::class.java)
-                    else -> null
-                }
-                intent?.let {
-                    it.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(it)
-                }
-            }, 250)
+            handleActionItems(id)
+            return false
+        }
 
-            return item.itemId != R.id.nav_dashboard // Return true to show the pill (except on dashboard if you want)
+        handler.postDelayed({
+            lifecycleScope.launch {
+                val customLedgers = withContext(Dispatchers.IO) { db.customLedgerDao().getAllLedgersList() }
+                val clickedLedger = customLedgers.find { (it.id + 1000) == id }
+
+                if (clickedLedger != null) {
+                    val intent = Intent(this@MainActivity, GenericLedgerActivity::class.java)
+                    intent.putExtra("ledger_template", clickedLedger)
+                    startActivity(intent)
+                } else {
+                    val intent = when (id) {
+                        R.id.nav_electricity -> Intent(this@MainActivity, ElectricityActivity::class.java)
+                        R.id.nav_milk -> Intent(this@MainActivity, MilkActivity::class.java)
+                        R.id.nav_expenses -> Intent(this@MainActivity, ExpenseActivity::class.java)
+                        R.id.nav_calculator -> Intent(this@MainActivity, CalculatorActivity::class.java)
+                        R.id.nav_trash -> Intent(this@MainActivity, TrashBinActivity::class.java)
+                        R.id.nav_analytics -> Intent(this@MainActivity, AnalyticsActivity::class.java)
+                        else -> null
+                    }
+                    intent?.let {
+                        it.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        startActivity(it)
+                    }
+                }
+            }
+        }, 250)
+
+        return id != R.id.nav_dashboard
+    }
+
+    private fun handleActionItems(id: Int) {
+        when (id) {
+            R.id.nav_backup -> showChoiceDialog("Backup Storage", "Choose destination:") { isDrive ->
+                if (isDrive) performDriveBackup() else performLocalBackup()
+            }
+            R.id.nav_restore -> showChoiceDialog("Restore Source", "Select source:") { isDrive ->
+                if (isDrive) performDriveRestore() else performLocalRestore()
+            }
+            R.id.nav_wipe_data -> handleWipeData()
         }
     }
 
@@ -262,9 +268,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         tvTitle.text = title
         tvMsg.text = message
-        containerDetails.visibility = View.GONE // Ensure details are hidden
+        containerDetails.visibility = View.GONE
 
-        // Customize button text for the choice
         btnLocal.text = "Local Device"
         btnDrive.text = "Google Drive"
 
@@ -279,7 +284,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         dialog.show()
     }
 
-    // WIPE DATA LOGIC ---
     private fun handleWipeData() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
         val builder = androidx.appcompat.app.AlertDialog.Builder(this)
@@ -297,7 +301,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         tvMessage.text = "This will permanently delete all your local records.\n\nAre you sure?"
         btnConfirm.text = "Delete Everything"
 
-        // Hide details section since we are wiping everything
         containerDetails.visibility = View.GONE
 
         btnCancel.setOnClickListener { dialog.dismiss() }
@@ -345,25 +348,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun setupNavigation() {
         drawerLayout = findViewById(R.id.drawer_layout)
-        val navigationView = findViewById<NavigationView>(R.id.navigationView)
+        navigationView = findViewById(R.id.navigationView)
         val topAppBar = findViewById<MaterialToolbar>(R.id.topAppBar)
         topAppBar.setNavigationOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
         navigationView.setNavigationItemSelectedListener(this)
-    }
-
-    private fun setupTiles() {
-        findViewById<MaterialCardView>(R.id.cardElectricity).setOnClickListener {
-            startActivity(Intent(this, ElectricityActivity::class.java))
-        }
-        findViewById<MaterialCardView>(R.id.cardMilk).setOnClickListener {
-            startActivity(Intent(this, MilkActivity::class.java))
-        }
-        findViewById<MaterialCardView>(R.id.cardExpenses).setOnClickListener {
-            startActivity(Intent(this, ExpenseActivity::class.java))
-        }
-        findViewById<ExtendedFloatingActionButton>(R.id.btnAnalytics).setOnClickListener {
-            startActivity(Intent(this, AnalyticsActivity::class.java))
-        }
     }
 
     private fun setupGestures() {
@@ -432,10 +420,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun performDriveBackup() {
+        cacheDir.listFiles()?.forEach { if (it.name.startsWith("SmartLedger_Drive_")) it.delete() }
         val sdf = SimpleDateFormat("dd-MMM-yyyy_HHmm", Locale.getDefault())
         val fileName = "SmartLedger_Drive_${sdf.format(Date())}.zip"
         val tempFile = File(cacheDir, fileName)
-        val contentUri = androidx.core.content.FileProvider.getUriForFile(this, "${packageName}.fileprovider", tempFile)
 
         showLedgerDialog("Drive Backup", "Packing records...") { dialog, views ->
             views.progress.visibility = View.VISIBLE
@@ -445,28 +433,36 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             views.btnCancel.setOnClickListener {
                 isBackupCancelled = true
                 dialog.dismiss()
+                Toast.makeText(this@MainActivity, "Backup cancelled.", Toast.LENGTH_SHORT).show()
             }
 
             lifecycleScope.launch {
                 try {
-                    // Creation Phase
+                    if (!tempFile.exists()) tempFile.createNewFile()
+
+                    val contentUri = androidx.core.content.FileProvider.getUriForFile(
+                        this@MainActivity,
+                        "${packageName}.fileprovider",
+                        tempFile
+                    )
+
                     val res = BackupManager.createZipBackup(this@MainActivity, contentUri, db) { isBackupCancelled }
 
                     withContext(Dispatchers.Main) {
-                        // Update UI for Phase 2: Ready to Send
                         views.progress.visibility = View.GONE
                         views.title.text = "Backup Ready"
                         views.message.text = "Active records packed. Send to Drive to upload."
-
-                        // Hide any leftovers from the XML (like that Rs 500 placeholder)
                         views.detailAmount.visibility = View.GONE
                         views.details.visibility = View.VISIBLE
 
-                        views.detailTitle.text = """
-                        • Electricity: ${res.elecAdded} Records
-                        • Milk Records: ${res.milkAdded} Records
-                        • Expenses: ${res.expenseAdded} Records
-                    """.trimIndent()
+                        val summary = StringBuilder()
+                        if (res.elecAdded > 0) summary.append("• Electricity: ${res.elecAdded}\n")
+                        if (res.milkAdded > 0) summary.append("• Milk: ${res.milkAdded}\n")
+                        if (res.expenseAdded > 0) summary.append("• Expenses: ${res.expenseAdded}\n")
+                        res.customCounts.forEach { (name, count) ->
+                            if (count > 0) summary.append("• $name: $count\n")
+                        }
+                        views.detailTitle.text = summary.toString().trim()
 
                         views.btnConfirm.visibility = View.VISIBLE
                         views.btnConfirm.text = "Send to Drive"
@@ -481,7 +477,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             }
 
                             try {
-                                // Use the launcher so we get the Toast when they come back
                                 driveBackupIntentLauncher.launch(Intent.createChooser(shareIntent, "Save to Drive"))
 
                                 val now = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date())
@@ -496,7 +491,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     withContext(Dispatchers.Main) {
                         dialog.dismiss()
                         if (e.message != "Backup Stopped") {
-                            Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@MainActivity, "Backup failed. Please try again.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@MainActivity, "Backup cancelled.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -504,24 +501,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    // --- LOCAL RESTORE (Phone Storage) ---
+    // --- LOCAL RESTORE  ---
     private fun performLocalRestore() {
         val mimeTypes = arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")
         localRestoreLauncher.launch(mimeTypes)
     }
 
-    // --- DRIVE RESTORE (Direct Drive App Picker) ---
+    // --- DRIVE RESTORE  ---
     private fun performDriveRestore() {
         val driveIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
             type = "application/zip"
-            setPackage("com.google.android.apps.docs") // Jumps straight to Drive
+            setPackage("com.google.android.apps.docs")
             addCategory(Intent.CATEGORY_OPENABLE)
             putExtra(Intent.EXTRA_LOCAL_ONLY, false)
         }
         try {
             driveRestoreLauncher.launch(driveIntent)
         } catch (e: Exception) {
-            performLocalRestore() // Fallback if Drive app is missing
+            performLocalRestore()
             Toast.makeText(this, "Drive app not found, using system picker", Toast.LENGTH_SHORT).show()
         }
     }
@@ -532,7 +529,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             views.btnCancel.visibility = View.VISIBLE
             isBackupCancelled = false
 
-            // FIX: Make the cancel button work
             views.btnCancel.setOnClickListener {
                 isBackupCancelled = true
                 dialog.dismiss()
@@ -547,12 +543,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                     withContext(Dispatchers.Main) {
                         setupHeader()
-                        // This calls showSummary which handles the "Done" state
                         showSummary(views, "Backup Done", "File saved successfully", res)
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
                         dialog.dismiss()
+                        Toast.makeText(this@MainActivity, "Backup failed. Please try again.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -563,8 +559,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         showLedgerDialog("Restore", "Importing data...") { dialog, views ->
             views.progress.visibility = View.VISIBLE
             lifecycleScope.launch {
-                val res = BackupManager.restoreFromZip(this@MainActivity, uri, db) { isRestoreCancelled }
-                showSummary(views, "Restore Done", "Data integrated successfully", res, true)
+                try {
+                    val res = BackupManager.restoreFromZip(this@MainActivity, uri, db) { isRestoreCancelled }
+                    showSummary(views, "Restore Done", "Data integrated successfully", res, true)
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        dialog.dismiss()
+                        Toast.makeText(this@MainActivity, "Restore failed. The file may be corrupted or incompatible.", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }
@@ -572,35 +575,150 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun showSummary(views: DialogViews, title: String, msg: String, res: RestoreResult, isRestore: Boolean = false) {
         views.progress.visibility = View.GONE
-        views.title.text = title
-        views.message.text = msg
         views.details.visibility = View.VISIBLE
         views.btnCancel.visibility = View.GONE
         views.btnConfirm.visibility = View.VISIBLE
+        views.detailTitle.text = ""
+        views.detailAmount.text = ""
+        views.detailAmount.visibility = View.GONE
+        views.title.text = title
+        views.message.text = msg
         views.btnConfirm.text = if (isRestore) "Finish" else "Done"
 
-        // FIX: Hide the "Rs 500" placeholder
-        views.detailAmount.visibility = if (isRestore) View.VISIBLE else View.GONE
+        val summaryBuilder = StringBuilder()
 
-        views.detailTitle.text = """
-        • Electricity: ${res.elecAdded} Records
-        • Milk Records: ${res.milkAdded} Records
-        • Expenses: ${res.expenseAdded} Records
-    """.trimIndent()
+        if (res.elecAdded > 0) summaryBuilder.append("• Electricity: ${res.elecAdded} Records\n")
+        if (res.milkAdded > 0) summaryBuilder.append("• Milk Records: ${res.milkAdded} Records\n")
+        if (res.expenseAdded > 0) summaryBuilder.append("• Expenses: ${res.expenseAdded} Records\n")
 
-        if (isRestore) {
-            val skipped = res.elecSkipped + res.milkSkipped + res.expenseSkipped
-            if (skipped > 0) {
+        res.customCounts.forEach { (name, count) ->
+            if (count > 0) {
+                summaryBuilder.append("• $name: $count Records\n")
+            }
+        }
+
+        val totalSkipped = res.elecSkipped + res.milkSkipped + res.expenseSkipped + res.customSkipped
+
+        if (summaryBuilder.isEmpty()) {
+            if (totalSkipped > 0) {
+                views.detailTitle.text = "No new records to add."
                 views.detailAmount.visibility = View.VISIBLE
-                views.detailAmount.text = "Note: $skipped duplicates were ignored."
+                views.detailAmount.text = "Note: $totalSkipped records already exist and were skipped."
             } else {
-                views.detailAmount.visibility = View.GONE
+                views.detailTitle.text = "All records were already up to date."
+            }
+        } else {
+            views.detailTitle.text = summaryBuilder.toString().trim()
+
+            if (isRestore && totalSkipped > 0) {
+                views.detailAmount.visibility = View.VISIBLE
+                views.detailAmount.text = "Note: $totalSkipped duplicates were ignored."
             }
         }
 
         views.btnConfirm.setOnClickListener {
-            if (isRestore) recreate() else (views.btnConfirm.context as? Activity)?.recreate()
+            if (isRestore) {
+                Toast.makeText(this, "Restore complete.", Toast.LENGTH_SHORT).show()
+                recreate()
+            } else {
+                Toast.makeText(this, "Backup saved successfully.", Toast.LENGTH_SHORT).show()
+                (it.context as? Activity)?.recreate()
+            }
         }
+    }
+
+    private fun setupDynamicDashboard() {
+        val rv = findViewById<RecyclerView>(R.id.rvDashboard)
+        val nestedScroll = findViewById<androidx.core.widget.NestedScrollView>(R.id.nestedScrollMain)
+        val fabAnalytics = findViewById<ExtendedFloatingActionButton>(R.id.btnAnalytics)
+
+        nestedScroll.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+            if (scrollY > oldScrollY + 20) {
+                if (fabAnalytics.isExtended) {
+                    fabAnalytics.shrink()
+                }
+            } else if (scrollY < oldScrollY - 20) {
+                if (!fabAnalytics.isExtended) {
+                    fabAnalytics.extend()
+                }
+            }
+        }
+        val dashboardAdapter = DashboardAdapter { tile ->
+            when {
+                tile.isAddTile -> startActivity(Intent(this, CreateCustomLedgerActivity::class.java))
+                tile.isCustom -> {
+                    val intent = Intent(this, GenericLedgerActivity::class.java)
+                    intent.putExtra("ledger_template", tile.ledgerTemplate)
+                    startActivity(intent)
+                }
+                else -> navigateToStaticLedger(tile.id)
+            }
+        }
+
+        rv.layoutManager = GridLayoutManager(this, 2)
+        rv.adapter = dashboardAdapter
+        rv.isNestedScrollingEnabled = false
+
+        lifecycleScope.launch {
+            db.customLedgerDao().getAllLedgers().collect { customLedgers ->
+                val tiles = mutableListOf<DashboardTile>()
+
+                tiles.add(DashboardTile(1, "Electricity", R.drawable.ic_bolt, null))
+                tiles.add(DashboardTile(2, "Milk Records", R.drawable.ic_water_drop, null))
+                tiles.add(DashboardTile(3, "Expenses", R.drawable.ic_attach_money, null))
+                customLedgers.forEach { ledger ->
+                    tiles.add(DashboardTile(ledger.id + 100, ledger.name, null, ledger.iconName, true, false, ledger))
+                }
+
+                tiles.add(DashboardTile(-1, "Add Ledger", null, "ic_add", false, true))
+
+                dashboardAdapter.submitList(tiles)
+            }
+        }
+    }
+
+    private fun observeCustomLedgers() {
+        lifecycleScope.launch {
+            db.customLedgerDao().getAllLedgers().collect { ledgers ->
+                val menu = navigationView.menu
+                val staticIds = setOf(R.id.nav_dashboard, R.id.nav_electricity, R.id.nav_milk, R.id.nav_expenses)
+                val toRemove = mutableListOf<Int>()
+
+                for (i in 0 until menu.size()) {
+                    val item = menu.getItem(i)
+                    if (item.groupId == R.id.group_main && !staticIds.contains(item.itemId)) {
+                        toRemove.add(item.itemId)
+                    }
+                }
+
+                toRemove.forEach { menu.removeItem(it) }
+
+                ledgers.forEachIndexed { index, ledger ->
+                    val iconResId = resources.getIdentifier(ledger.iconName, "drawable", packageName)
+
+                    val menuItem = menu.add(
+                        R.id.group_main,
+                        ledger.id + 1000,
+                        10 + index,
+                        ledger.name
+                    )
+
+                    menuItem.setIcon(if (iconResId != 0) iconResId else R.drawable.ic_star)
+                    menuItem.setCheckable(true)
+                    menuItem.icon?.setTint(ContextCompat.getColor(this@MainActivity, R.color.teal_main))
+                }
+            }
+        }
+    }
+
+    private fun navigateToStaticLedger(id: Int) {
+        val intent = when (id) {
+            1 -> Intent(this, ElectricityActivity::class.java)
+            2 -> Intent(this, MilkActivity::class.java)
+            3 -> Intent(this, ExpenseActivity::class.java)
+            else -> null
+        }
+        intent?.let { startActivity(it) }
     }
 
     override fun onResume() {

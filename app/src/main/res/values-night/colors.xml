@@ -7,6 +7,8 @@
     <color name="teal_main">#179A9D</color>
     <color name="teal_dark">#004D4F</color>
     <color name="teal_light">#26A6A9</color>
+    <color name="tag_teal_bg">#1A3735</color>
+    <color name="tile_add_bg">#263238</color>  <!-- Blue Grey 900 — dark but not pure black -->
 
     <color name="selected_item_bg">#B2E0E1</color>
 

@@ -14,8 +14,6 @@ data class MilkRecord(
     val totalLiters: Double = 0.0,
     val totalAmount: Double = 0.0,
     val dailyEntries: List<DailyEntry> = emptyList(),
-
-    // Trash Bin Fields
     val isDeleted: Boolean = false,
     val deletedAt: Long? = null,
 

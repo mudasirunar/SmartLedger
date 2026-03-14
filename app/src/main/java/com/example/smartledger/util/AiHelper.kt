@@ -1,11 +1,18 @@
+package com.example.smartledger.util
+
 import com.example.smartledger.BuildConfig
+import com.example.smartledger.data.Electricity
+import com.example.smartledger.data.Expense
+import com.example.smartledger.data.MilkRecord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import java.net.UnknownHostException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,36 +32,30 @@ object AiHelper {
         suspend fun getChatCompletion(
             @Header("Authorization") auth: String,
             @Body body: GroqRequest
-        ): retrofit2.Response<GroqResponse>
+        ): Response<GroqResponse>
     }
 
-    // --- RESTORED SUMMARIZATION FUNCTIONS ---
-
-    fun summarizeElectricity(records: List<com.example.smartledger.data.Electricity>): String {
+    fun summarizeElectricity(records: List<Electricity>): String {
         if (records.isEmpty()) return "No records."
         val sdf = SimpleDateFormat("MMM yyyy", Locale.getDefault())
         return records.joinToString("; ") {
             "Date: ${sdf.format(Date(it.endDate))}, Units: ${it.totalUnits ?: 0}, Rs: ${it.amount ?: 0}"
         }
     }
-
-    fun summarizeMilk(records: List<com.example.smartledger.data.MilkRecord>): String {
+    fun summarizeMilk(records: List<MilkRecord>): String {
         if (records.isEmpty()) return "No records."
         val sortedRecords = records.sortedWith(compareBy({ it.year }, { it.monthIndex }))
         return sortedRecords.joinToString("; ") {
             "Period: ${it.monthName} ${it.year}, Qty: ${it.totalLiters}L, Rate: Rs ${it.pricePerLiter}/L, Total: Rs ${it.totalAmount}"
         }
     }
-
-    fun summarizeExpenses(records: List<com.example.smartledger.data.Expense>): String {
+    fun summarizeExpenses(records: List<Expense>): String {
         if (records.isEmpty()) return "No records."
         val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
         return records.joinToString("; ") {
             "[Date: ${sdf.format(Date(it.date))}, Item: ${it.title}, Info: ${it.description}, Rs: ${it.amount}]"
         }
     }
-
-    // Unified Error Checker
     fun isError(result: String): Boolean {
         val r = result.lowercase()
         return r.contains("internet") || r.contains("network") ||
@@ -65,12 +66,11 @@ object AiHelper {
 
     private suspend fun callLedgerAi(prompt: String): String = withContext(Dispatchers.IO) {
         try {
-            // CLEAN THE PROMPT: Remove characters that break JSON
             val cleanPrompt = prompt
-                .replace("\"", "'")  // Replace double quotes with single quotes
-                .replace("\n", " ")  // Remove newlines
+                .replace("\"", "'")
+                .replace("\n", " ")
                 .replace("\r", " ")
-                .replace("\\", "/")  // Replace backslashes
+                .replace("\\", "/")
 
             val request = GroqRequest(
                 model = MODEL_ID,
@@ -92,7 +92,7 @@ object AiHelper {
                 }
             }
         } catch (e: Exception) {
-            if (e is java.net.UnknownHostException) "No internet connection. Please check your network and try again."
+            if (e is UnknownHostException) "No internet connection. Please check your network and try again."
             else "Ledger AI is unavailable. Please try again later."
         }
     }
@@ -100,8 +100,6 @@ object AiHelper {
 
     suspend fun getInsight(dataType: String, dataSummary: String): String {
         val currentDate = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
-
-        // Dynamic context based on what the user is looking at
         val localContext = when (dataType.lowercase()) {
             "electricity" -> "Location: Karachi. Utility: K-Electric. Focus on units (kWh), peak/off-peak logic, and weather impact on cooling."
             "milk" -> "Location: Karachi. Context: Daily milk consumption and pricing. Focus on price per liter and monthly consumption stability."
@@ -127,6 +125,11 @@ object AiHelper {
 
     suspend fun getPrediction(dataType: String, dataSummary: String): String {
         val currentDate = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
+        val predictMonthMatch = Regex("Predict for: (.+?) only\\.").find(dataSummary)
+        val predictMonth = predictMonthMatch?.groupValues?.get(1) ?: "next month"
+        val cleanSummary = dataSummary
+            .replace(Regex("\\[Last completed month:.*?\\]"), "")
+            .trim()
 
         val localContext = when (dataType.lowercase()) {
             "electricity" -> "Karachi weather context: Heatwaves in summer, lower usage in winter. K-Electric billing."
@@ -138,15 +141,19 @@ object AiHelper {
         Today: $currentDate.
         $localContext
         Role: Expert Financial Forecaster.
-        History: $dataSummary
+        History: $cleanSummary
+        
+        IMPORTANT: You are predicting specifically for: $predictMonth.
+        Do NOT predict any other month. The prediction header must say "Prediction for $predictMonth".
         
         Task:
-        1. Explain the prediction based on the upcoming month's season or trend.
-        2. Compare it briefly to the previous month's actual data.
-        3. Predict next month's total cost in PKR (e.g., "Rs 5,200").
-        4. Predict quantity (e.g., "150 Units" or "60 Liters").
+        1. Start with a clear header: "Prediction for $predictMonth"
+        2. Explain the prediction based on $predictMonth's season or expected trend.
+        3. Compare briefly to the last completed month's actual data.
+        4. Predict total cost in PKR for $predictMonth (e.g., "Estimated Cost: Rs 5,200").
+        5. Predict quantity for $predictMonth (e.g., "Estimated Quantity: 60 Liters" or "150 Units").
         
-        Format: Concise bullet points. Plain text only.
+        Format: Concise bullet points. Plain text only. No bold or hashtags.
     """.trimIndent()
 
         return callLedgerAi(prompt)

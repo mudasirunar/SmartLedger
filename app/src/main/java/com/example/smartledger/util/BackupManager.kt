@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import com.example.smartledger.data.AppDatabase
 import com.example.smartledger.data.BackupData
+import com.example.smartledger.data.DateMode
+import com.example.smartledger.data.LedgerType
 import com.example.smartledger.data.RestoreResult
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +37,7 @@ object BackupManager {
                 val electricity = db.electricityDao().getAllRaw()
                 val milk = db.milkDao().getAllRaw()
 
-                // 1. Process Expenses (Correctly counting only active)
+                // 1. Process Expenses
                 val processedExpenses = expenses.map { expense ->
                     if (checkCancel()) throw Exception("Backup Stopped")
                     val newPaths = expense.imagePaths.map { path ->
@@ -51,7 +53,7 @@ object BackupManager {
                     expense.copy(imagePaths = newPaths)
                 }
 
-                // 2. Process Electricity (Correctly counting only active)
+                // 2. Process Electricity
                 val processedElectricity = electricity.map { elec ->
                     if (checkCancel()) throw Exception("Backup Stopped")
                     val newPaths = elec.imagePaths.map { path ->
@@ -70,12 +72,50 @@ object BackupManager {
                 // 3. Process Milk
                 result.milkAdded = milk.count { it.deletedAt == 0L || it.deletedAt == null }
 
-                // Save the timestamp and the FULL lists (including trash) to the JSON
+
+                val customEntries = db.customLedgerDao().getAllRawEntries()
+                val customLedgers = db.customLedgerDao().getAllLedgersList()
+
+                // 4. Process Custom Entries
+                val processedCustomEntries = customEntries.map { entry ->
+                    if (checkCancel()) throw Exception("Backup Stopped")
+
+                    val newPaths = entry.imagePaths.map { path ->
+                        val file = File(path)
+                        if (file.exists()) {
+                            addToZip(zos, file, "$IMAGES_DIR/${file.name}")
+                            file.name
+                        } else path
+                    }
+
+                    val parentLedger = customLedgers.find { it.id == entry.ledgerId }
+
+                    if (!entry.isDeleted && parentLedger != null && !parentLedger.isDeleted) {
+                        val ledgerName = parentLedger.name
+                        result.customCounts[ledgerName] = (result.customCounts[ledgerName] ?: 0) + 1
+                    }
+
+                    entry.copy(imagePaths = newPaths)
+                }
+
+                val customDailyRecords = db.customLedgerDao().getAllRawDailyRecords()
+
+                customDailyRecords.forEach { record ->
+                    val parentLedger = customLedgers.find { it.id == record.ledgerId }
+                    if (!record.isDeleted && parentLedger != null && !parentLedger.isDeleted) {
+                        val ledgerName = parentLedger.name
+                        result.customCounts[ledgerName] = (result.customCounts[ledgerName] ?: 0) + 1
+                    }
+                }
+
                 val backupData = BackupData(
                     timestamp = System.currentTimeMillis(),
                     expenses = processedExpenses,
                     electricity = processedElectricity,
-                    milkRecords = milk // Full list preserved in ZIP
+                    milkRecords = milk,
+                    customLedgers = customLedgers,
+                    customEntries = processedCustomEntries,
+                    customDailyRecords = customDailyRecords
                 )
 
                 zos.putNextEntry(ZipEntry(JSON_FILENAME))
@@ -99,7 +139,7 @@ object BackupManager {
         var backupData: BackupData? = null
         val result = RestoreResult()
 
-        // 1. EXTRACT & PARSE (Remains the same)
+        // 1. EXTRACT & PARSE
         cr.openInputStream(uri)?.use { inputStream ->
             ZipInputStream(BufferedInputStream(inputStream)).use { zis ->
                 var entry = zis.nextEntry
@@ -137,13 +177,11 @@ object BackupManager {
                     data.expenses.forEach { incoming ->
                         if (checkCancel()) throw RestoreCancelledException()
 
-                        // Priority Search: Look for Active version of this expense first
                         val existing = existingExpenses
                             .sortedBy { it.deletedAt ?: 0L }
                             .find { it.date == incoming.date && it.amount == incoming.amount }
 
                         if (existing == null) {
-                            // Brand new record: Insert as is
                             val paths = incoming.imagePaths.map { File(internalImgDir, it).absolutePath }
                             db.expenseDao().insertExpense(incoming.copy(id = 0, imagePaths = paths))
 
@@ -153,7 +191,6 @@ object BackupManager {
                             val isStatusMismatch = existing.isDeleted != incoming.isDeleted
 
                             if (needsUnDelete || isStatusMismatch) {
-                                // Force status to match backup (Reset isDeleted/deletedAt)
                                 val updatedRecord = incoming.copy(
                                     id = existing.id,
                                     isDeleted = incoming.isDeleted,
@@ -163,7 +200,6 @@ object BackupManager {
 
                                 if (!incoming.isDeleted) result.expenseAdded++
                             } else {
-                                // Everything identical (Duplicate)
                                 if (!incoming.isDeleted) result.expenseSkipped++
                             }
                         }
@@ -173,13 +209,11 @@ object BackupManager {
                     data.electricity.forEach { incoming ->
                         if (checkCancel()) throw RestoreCancelledException()
 
-                        // Priority Search: Look for Active version of this bill cycle first
                         val existing = existingElec
                             .sortedBy { it.deletedAt ?: 0L }
                             .find { it.startDate == incoming.startDate && it.endDate == incoming.endDate }
 
                         if (existing == null) {
-                            // Brand new record
                             val paths = incoming.imagePaths.map { File(internalImgDir, it).absolutePath }
                             db.electricityDao().insert(incoming.copy(id = 0, imagePaths = paths))
 
@@ -189,7 +223,6 @@ object BackupManager {
                             val isStatusMismatch = existing.isDeleted != incoming.isDeleted
 
                             if (needsUnDelete || isStatusMismatch) {
-                                // Force status to match backup
                                 val updatedRecord = incoming.copy(
                                     id = existing.id,
                                     isDeleted = incoming.isDeleted,
@@ -199,7 +232,6 @@ object BackupManager {
 
                                 if (!incoming.isDeleted) result.elecAdded++
                             } else {
-                                // Everything identical (Duplicate)
                                 if (!incoming.isDeleted) result.elecSkipped++
                             }
                         }
@@ -209,13 +241,11 @@ object BackupManager {
                     data.milkRecords.forEach { incoming ->
                         if (checkCancel()) throw RestoreCancelledException()
 
-                        // 1. Search for Month/Year
                         val existing = existingMilk
-                            .sortedBy { it.deletedAt ?: 0L } // Keep active ones first
+                            .sortedBy { it.deletedAt ?: 0L }
                             .find { it.monthIndex == incoming.monthIndex && it.year == incoming.year }
 
                         if (existing == null) {
-                            // Brand new: Insert exactly as it is in backup
                             db.milkDao().insert(incoming.copy(id = 0))
                             if (!incoming.isDeleted) {
                                 result.milkAdded++
@@ -225,11 +255,9 @@ object BackupManager {
                             val backupIsDeleted = incoming.isDeleted
 
                             val isDataChanged = existing.dailyEntries != incoming.dailyEntries
-                            // We check if the backup wants it active but local has it deleted
                             val needsUnDelete = localIsDeleted && !backupIsDeleted
 
                             if (isDataChanged || needsUnDelete || localIsDeleted != backupIsDeleted) {
-                                // FIX: If backup says it's active, we MUST force isDeleted = false and deletedAt = null
                                 val updatedRecord = incoming.copy(
                                     id = existing.id,
                                     isDeleted = backupIsDeleted,
@@ -238,14 +266,113 @@ object BackupManager {
 
                                 db.milkDao().update(updatedRecord)
 
-                                // Only count in the summary if it ended up as an active record
                                 if (!backupIsDeleted) {
                                     result.milkAdded++
                                 }
                             } else {
-                                // Everything is identical (both active or both trashed)
                                 if (!backupIsDeleted) {
                                     result.milkSkipped++
+                                }
+                            }
+                        }
+                    }
+
+                    // --- CUSTOM LEDGER RESTORE ---
+                    data.customLedgers.forEach { incomingLedger ->
+                        if (checkCancel()) throw RestoreCancelledException()
+                        val existingLedger = db.customLedgerDao().getAllLedgersList().find {
+                            it.name.equals(incomingLedger.name, ignoreCase = true)
+                        }
+
+                        if (existingLedger == null) {
+                            val safeLedger = incomingLedger.copy(
+                                id = 0,
+                                dateMode = incomingLedger.dateMode,
+                                ledgerType = incomingLedger.ledgerType
+                            )
+                            db.customLedgerDao().insertLedger(safeLedger)
+                        }
+                    }
+
+                    // 2. RESTORE CUSTOM ENTRIES
+                    val localLedgers = db.customLedgerDao().getAllLedgersList()
+
+                    data.customEntries.forEach { incomingEntry ->
+                        if (checkCancel()) throw RestoreCancelledException()
+
+                        val incomingLedgerName = data.customLedgers.find { it.id == incomingEntry.ledgerId }?.name
+                        val targetLedger = localLedgers.find { it.name == incomingLedgerName }
+
+                        if (targetLedger != null) {
+                            val isDuplicate = db.customLedgerDao().checkEntryExists(
+                                targetLedger.id,
+                                incomingEntry.date,
+                                incomingEntry.amount ?: 0.0,
+                                incomingEntry.dataJson
+                            )
+
+                            if (!isDuplicate) {
+                                val paths = incomingEntry.imagePaths.map { fileName ->
+                                    File(internalImgDir, fileName).absolutePath
+                                }
+                                db.customLedgerDao().insertEntry(incomingEntry.copy(
+                                    id = 0,
+                                    ledgerId = targetLedger.id,
+                                    imagePaths = paths
+                                ))
+
+                                if (!incomingEntry.isDeleted && !targetLedger.isDeleted) {
+                                    val name = targetLedger.name
+                                    result.customCounts[name] = (result.customCounts[name] ?: 0) + 1
+                                }
+                            } else {
+                                result.customSkipped++
+                            }
+                        }
+                    }
+
+                    // --- RESTORE CUSTOM DAILY RECORDS ---
+                    val dailyRecordsToRestore = data.customDailyRecords
+                    dailyRecordsToRestore.forEach { incomingRecord ->
+                        if (checkCancel()) throw RestoreCancelledException()
+
+                        val incomingLedgerName = data.customLedgers.find { it.id == incomingRecord.ledgerId }?.name
+                        val targetLedger = localLedgers.find { it.name == incomingLedgerName }
+
+                        if (targetLedger != null) {
+                            val existing = db.customLedgerDao().getDailyRecordByMonthYear(
+                                targetLedger.id,
+                                incomingRecord.monthIndex,
+                                incomingRecord.year
+                            )
+
+                            if (existing == null) {
+                                db.customLedgerDao().insertDailyRecord(
+                                    incomingRecord.copy(id = 0, ledgerId = targetLedger.id)
+                                )
+                                if (!incomingRecord.isDeleted && !targetLedger.isDeleted) {
+                                    val name = targetLedger.name
+                                    result.customCounts[name] = (result.customCounts[name] ?: 0) + 1
+                                }
+                            } else {
+                                if (existing.dailyEntries != incomingRecord.dailyEntries ||
+                                    existing.totalAmount != incomingRecord.totalAmount ||
+                                    (existing.isDeleted && !incomingRecord.isDeleted)) {
+
+                                    db.customLedgerDao().updateDailyRecord(
+                                        incomingRecord.copy(
+                                            id = existing.id,
+                                            ledgerId = targetLedger.id,
+                                            isDeleted = incomingRecord.isDeleted,
+                                            deletedAt = if (incomingRecord.isDeleted) incomingRecord.deletedAt else null
+                                        )
+                                    )
+                                    if (!incomingRecord.isDeleted && !targetLedger.isDeleted) {
+                                        val name = targetLedger.name
+                                        result.customCounts[name] = (result.customCounts[name] ?: 0) + 1
+                                    }
+                                } else {
+                                    result.customSkipped++
                                 }
                             }
                         }

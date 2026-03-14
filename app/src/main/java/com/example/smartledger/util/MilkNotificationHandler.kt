@@ -51,17 +51,14 @@ class MilkMorningWorker(val context: Context, workerParams: WorkerParameters) : 
             it.monthIndex == monthIdx && it.year == year && !it.isDeleted
         }
 
-        // Inside MilkMorningWorker.doWork()
         val todayDay = cal.get(Calendar.DAY_OF_MONTH)
         val todayEntry = activeMonth?.dailyEntries?.find { it.day == todayDay }
 
         if (todayEntry != null && todayEntry.liters > 0.0) {
-            // Already filled! Just schedule midnight and skip notification
             MilkNotificationHandler.scheduleMidnightCheck(context)
             return Result.success()
         }
 
-        // Safety Net: Month must exist and NOT be in trash
         if (activeMonth == null) {
             MilkNotificationHandler.scheduleMorningNotification(context)
             return Result.success()
@@ -78,7 +75,6 @@ class MilkMorningWorker(val context: Context, workerParams: WorkerParameters) : 
     }
 
     private fun showMilkInputNotification(context: Context, activeMonth: com.example.smartledger.data.MilkRecord) {
-        // Build Intent for ViewMilkActivity
         val contentIntent = Intent(context, com.example.smartledger.activity.ViewMilkActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("milk_data", activeMonth)
@@ -89,7 +85,6 @@ class MilkMorningWorker(val context: Context, workerParams: WorkerParameters) : 
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Setup Action Intents
         val replyIntent = Intent(context, MilkNotificationReceiver::class.java).apply { action = "ACTION_MILK_REPLY" }
         val replyPendingIntent = PendingIntent.getBroadcast(context, 0, replyIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
@@ -144,7 +139,6 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
         val db = AppDatabase.getDatabase(context)
         val cal = Calendar.getInstance()
 
-        // At Midnight, we check "Yesterday"
         cal.add(Calendar.DAY_OF_YEAR, -1)
         val targetDay = cal.get(Calendar.DAY_OF_MONTH)
         val monthIdx = cal.get(Calendar.MONTH)
@@ -155,7 +149,6 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
             it.monthIndex == monthIdx && it.year == year && !it.isDeleted
         }
 
-        // --- ROBUST CHECK ---
         val yesterdayEntry = activeMonth?.dailyEntries?.find { it.day == targetDay }
 
         if (yesterdayEntry != null && yesterdayEntry.liters > 0.0) {
@@ -163,7 +156,6 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
             return Result.success()
         }
 
-        // --- IF DATA IS MISSING, SHOW NOTIFICATION ---
         val contentIntent = Intent(context, com.example.smartledger.activity.ViewMilkActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("milk_data", activeMonth)
@@ -174,7 +166,6 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
 
         val missedDate = SimpleDateFormat("dd MMM", Locale.getDefault()).format(cal.time)
 
-        // RESTORED VIBRATION PATTERN
         val missedPattern = longArrayOf(0, 500, 200, 500, 200, 500)
 
         val builder = NotificationCompat.Builder(context, MilkNotificationConstants.CHANNEL_ID)
@@ -199,23 +190,16 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
 class MilkNotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action == "ACTION_MILK_REPLY") {
-            // 1. DISMISS NOTIFICATION INSTANTLY
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.cancel(MilkNotificationConstants.NOTIFICATION_ID)
-
-            // 2. EXTRACT DATA
             val quickValue = intent.getDoubleExtra("QUICK_VALUE", -1.0)
             val results = RemoteInput.getResultsFromIntent(intent)
             val input = results?.getCharSequence(MilkNotificationConstants.KEY_TEXT_REPLY)?.toString()
-
             val liters = if (quickValue != -1.0) quickValue else (input?.toDoubleOrNull() ?: 0.0)
-
-            // 3. DATABASE UPDATE & TOAST
             val db = AppDatabase.getDatabase(context)
             CoroutineScope(Dispatchers.IO).launch {
                 updateTodayMilkRecord(db, liters)
 
-                // Show confirmation Toast on Main Thread
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "$liters Liters added successfully", Toast.LENGTH_SHORT).show()
                 }

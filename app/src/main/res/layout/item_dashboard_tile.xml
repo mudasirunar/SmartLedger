@@ -1,0 +1,39 @@
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/tileCard"
+    style="@style/Widget.Material3.CardView.Elevated"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@color/tile_bg"
+    app:strokeColor="@color/teal_main"
+    app:strokeWidth="1dp">
+
+    <!-- Remove the ConstraintLayout with ratio — it collapses to 0 inside wrap_content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingVertical="24dp"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/ivTileIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            app:tint="@color/teal_main" />
+
+        <TextView
+            android:id="@+id/tvTileName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

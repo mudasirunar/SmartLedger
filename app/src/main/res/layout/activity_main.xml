@@ -28,6 +28,7 @@
             app:layout_constraintEnd_toEndOf="parent" />
 
         <androidx.core.widget.NestedScrollView
+            android:id="@+id/nestedScrollMain"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:fillViewport="true"
@@ -39,20 +40,21 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingBottom="100dp"> <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardDateTime"
-                style="@style/Widget.Material3.CardView.Elevated"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/teal_main"
-                app:strokeColor="@color/teal_dark"
-                app:strokeWidth="1dp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                android:paddingBottom="100dp">
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDateTime"
+                    style="@style/Widget.Material3.CardView.Elevated"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="16dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/teal_main"
+                    app:strokeColor="@color/teal_dark"
+                    app:strokeWidth="1dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -93,146 +95,38 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardElectricity"
-                    style="@style/Widget.Material3.CardView.Elevated"
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvDashboard"
                     android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    app:layout_constraintDimensionRatio="1:1"
-                    app:cardCornerRadius="24dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="8dp"
-                    app:cardBackgroundColor="@color/tile_bg"
-                    app:strokeColor="@color/teal_main"
-                    app:strokeWidth="1dp"
+                    android:layout_marginHorizontal="8dp"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/cardDateTime"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toStartOf="@+id/cardMilk">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:src="@drawable/ic_bolt"
-                            app:tint="@color/teal_main"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="Electricity"
-                            android:textColor="@color/text_primary"
-                            android:textStyle="bold"
-                            android:textSize="16sp"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardMilk"
-                    style="@style/Widget.Material3.CardView.Elevated"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    app:layout_constraintDimensionRatio="1:1"
-                    app:cardCornerRadius="24dp"
-                    android:layout_marginTop="0dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginEnd="16dp"
-                    app:cardBackgroundColor="@color/tile_bg"
-                    app:strokeColor="@color/teal_main"
-                    app:strokeWidth="1dp"
-                    app:layout_constraintTop_toTopOf="@id/cardElectricity"
-                    app:layout_constraintStart_toEndOf="@id/cardElectricity"
-                    app:layout_constraintEnd_toEndOf="parent">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:src="@drawable/ic_water_drop"
-                            app:tint="@color/teal_main"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="Milk Records"
-                            android:textColor="@color/text_primary"
-                            android:textStyle="bold"
-                            android:textSize="16sp"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardExpenses"
-                    style="@style/Widget.Material3.CardView.Elevated"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    app:layout_constraintDimensionRatio="1:1"
-                    app:cardCornerRadius="24dp"
-                    android:layout_marginTop="16dp"
-                    app:cardBackgroundColor="@color/tile_bg"
-                    app:strokeColor="@color/teal_main"
-                    app:strokeWidth="1dp"
-                    app:layout_constraintTop_toBottomOf="@id/cardElectricity"
-                    app:layout_constraintStart_toStartOf="@id/cardElectricity"
-                    app:layout_constraintEnd_toEndOf="@id/cardElectricity">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:src="@drawable/ic_attach_money"
-                            app:tint="@color/teal_main"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="Expenses"
-                            android:textColor="@color/text_primary"
-                            android:textStyle="bold"
-                            android:textSize="16sp"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+                    app:layout_constraintEnd_toEndOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.core.widget.NestedScrollView>
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/btnAnalytics"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Analytics"
             android:textColor="@color/white"
             android:textStyle="bold"
-            android:gravity="center"
             app:icon="@drawable/ic_pie_chart"
             app:iconTint="@color/white"
-            app:iconGravity="textStart"
             android:backgroundTint="@color/teal_main"
+            android:elevation="6dp"
+            android:layout_marginBottom="32dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="32dp"
-            android:elevation="6dp"/>
+            app:contentPaddingStart="20dp"
+            app:contentPaddingEnd="20dp" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

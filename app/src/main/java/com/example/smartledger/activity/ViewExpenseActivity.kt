@@ -10,7 +10,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager // Import Grid Layout
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.smartledger.R
 import com.example.smartledger.adapter.PhotoViewAdapter
@@ -29,24 +29,21 @@ import kotlinx.coroutines.withContext
 class ViewExpenseActivity : AppCompatActivity() {
 
     private var expense: Expense? = null
-    private lateinit var photoAdapter: PhotoViewAdapter
     private val db by lazy { AppDatabase.getDatabase(this) }
 
     private val editLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            // Get the "Record Updated" message
             val message = result.data?.getStringExtra("toast_message") ?: "Record Updated"
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            finish() // Return to the list after showing the toast
+            finish()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // 1. Enable Edge to Edge
+        enableEdgeToEdge()
         setContentView(R.layout.activity_view_expense)
 
-        // 2. Fix the Top Bar Overlap
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -70,7 +67,6 @@ class ViewExpenseActivity : AppCompatActivity() {
         }
         toolbar.navigationIcon?.setTint(getColor(R.color.white))
 
-        // Handle Delete Icon Click
         val btnDelete = findViewById<ImageView>(R.id.btnDeleteHeader)
         btnDelete.setOnClickListener {
             showDeleteConfirmationDialog(expense!!)
@@ -93,7 +89,6 @@ class ViewExpenseActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.detailTvDescription).text = desc
         }
 
-        // Dynamic Photo Section Visibility
         val rvPhotos = findViewById<RecyclerView>(R.id.detailRvPhotos)
         val tvPhotoHeader = findViewById<View>(R.id.detailPhotos)
         val images = expense?.imagePaths ?: emptyList()

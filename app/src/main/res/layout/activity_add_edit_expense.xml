@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:background="@color/teal_main"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="Add Expense"
+        app:title="Add Record"
         app:titleTextColor="@color/white" />
 
     <ScrollView

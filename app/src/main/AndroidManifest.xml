@@ -16,6 +16,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <queries>
+        <package android:name="com.google.android.apps.docs" />
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -48,7 +51,33 @@
         <activity android:name=".activity.ViewElectricityActivity" android:exported="false" android:screenOrientation="portrait" android:configChanges="orientation|screenSize" />
 
         <activity android:name=".activity.MilkActivity" android:exported="false" android:screenOrientation="portrait" android:configChanges="orientation|screenSize" />
-        <activity android:name=".activity.ViewMilkActivity" android:exported="false" android:screenOrientation="portrait" android:configChanges="orientation|screenSize" />
+        <activity android:name=".activity.ViewMilkActivity" android:exported="false" android:screenOrientation="portrait" android:configChanges="orientation|screenSize" android:windowSoftInputMode="adjustResize"/>
+
+        <activity android:name=".activity.CreateCustomLedgerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize" />
+
+        <activity android:name=".activity.GenericLedgerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize" />
+
+        <activity android:name=".activity.GenericAddEditActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize" />
+
+        <activity android:name=".activity.GenericViewActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize" />
+
+        <activity android:name=".activity.CustomDailyActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize"
+            android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".activity.AnalyticsActivity"
@@ -70,6 +99,33 @@
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <receiver
+            android:name=".util.MilkNotificationReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="ACTION_MILK_REPLY" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".util.MilkBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 </manifest>

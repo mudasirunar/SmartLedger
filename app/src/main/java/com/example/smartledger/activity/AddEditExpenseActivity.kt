@@ -1,6 +1,5 @@
 package com.example.smartledger.activity
 
-import android.app.DatePickerDialog
 import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -11,7 +10,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import com.google.android.material.datepicker.MaterialDatePicker
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -21,10 +19,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.example.smartledger.R
+import com.example.smartledger.adapter.ThumbnailAdapter
 import com.example.smartledger.data.AppDatabase
 import com.example.smartledger.data.Expense
-import com.example.smartledger.adapter.ThumbnailAdapter
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,7 +41,6 @@ class AddEditExpenseActivity : AppCompatActivity() {
     private var initialDescription = ""
     private var initialDate: Long = 0
     private val initialImagePaths = mutableListOf<String>()
-
     private lateinit var etDate: TextInputEditText
     private lateinit var etTitle: TextInputEditText
     private lateinit var etAmount: TextInputEditText
@@ -89,6 +87,7 @@ class AddEditExpenseActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_add_edit_expense)
         setupWindowInsets()
+        existingExpense = intent.getSerializableExtra("expense_data") as? Expense
 
         initViews()
         rvPhotos = findViewById(R.id.rvPhotos)
@@ -101,7 +100,6 @@ class AddEditExpenseActivity : AppCompatActivity() {
             }
         }
 
-        existingExpense = intent.getSerializableExtra("expense_data") as? Expense
 
         thumbnailAdapter = ThumbnailAdapter(selectedImagePaths) { imagePath ->
             val position = selectedImagePaths.indexOf(imagePath)
@@ -139,7 +137,7 @@ class AddEditExpenseActivity : AppCompatActivity() {
 
     private fun updatePhotoCount() {
         btnAddPhoto.isEnabled = selectedImagePaths.size < 5
-        btnAddPhoto.text = if(selectedImagePaths.size >= 5) "Limit Reached" else "Add Photo"
+        btnAddPhoto.text = if(selectedImagePaths.size >= 5) "Limit Reached" else "Add"
     }
 
     private fun showImageSourceDialog() {
@@ -174,7 +172,6 @@ class AddEditExpenseActivity : AppCompatActivity() {
     }
 
     private fun processSelectedImage(uri: Uri) {
-        // Show a small toast or loader if possible, as this now happens in background
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val inputStream = contentResolver.openInputStream(uri)
@@ -190,7 +187,6 @@ class AddEditExpenseActivity : AppCompatActivity() {
                         input.copyTo(output)
                     }
                 }
-
                 // Switch back to Main thread to update UI
                 withContext(Dispatchers.Main) {
                     selectedImagePaths.add(file.absolutePath)
@@ -208,7 +204,10 @@ class AddEditExpenseActivity : AppCompatActivity() {
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(0, systemBars.top, 0, systemBars.bottom)
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val bottomPadding = if (imeInsets.bottom > 0) imeInsets.bottom else systemBars.bottom
+
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding)
             insets
         }
     }
@@ -225,7 +224,7 @@ class AddEditExpenseActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
-        toolbar.title = if (existingExpense != null) "Edit Expense" else "Add Expense"
+        toolbar.title = if (existingExpense != null) "Edit Record" else "Add Record"
 
         etDate = findViewById(R.id.etDate)
         etTitle = findViewById(R.id.etTitle)
@@ -236,9 +235,6 @@ class AddEditExpenseActivity : AppCompatActivity() {
         updateDateDisplay(selectedDate)
 
         etDate.setOnClickListener {
-            // --- FIX START: ADJUST FOR TIMEZONE ---
-            // 1. Convert your Local `selectedDate` to UTC for the picker
-            // This adds your timezone offset so the Picker sees the correct day
             val localCalendar = Calendar.getInstance()
             localCalendar.timeInMillis = selectedDate
 
@@ -250,11 +246,9 @@ class AddEditExpenseActivity : AppCompatActivity() {
                 localCalendar.get(Calendar.DAY_OF_MONTH)
             )
             val utcTime = utcCalendar.timeInMillis
-
-            // 2. Build the Picker
             val picker = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Select Date")
-                .setSelection(utcTime) // Pass the adjusted UTC time
+                .setSelection(utcTime)
                 .setTheme(R.style.App_MaterialDatePicker)
                 .build()
 
@@ -262,16 +256,13 @@ class AddEditExpenseActivity : AppCompatActivity() {
 
                 val utcCal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
                 utcCal.timeInMillis = selection
-
-                // Create a local calendar and set it to the same Day/Month/Year
                 val localCal = Calendar.getInstance()
                 localCal.set(
                     utcCal.get(Calendar.YEAR),
                     utcCal.get(Calendar.MONTH),
                     utcCal.get(Calendar.DAY_OF_MONTH),
-                    0, 0, 0 // Reset time to midnight
+                    0, 0, 0
                 )
-
                 selectedDate = localCal.timeInMillis
                 updateDateDisplay(selectedDate)
             }
@@ -313,11 +304,15 @@ class AddEditExpenseActivity : AppCompatActivity() {
             }
 
             thumbnailAdapter.notifyDataSetChanged()
-            updatePhotoCount() // Refresh button state (e.g., "Limit Reached")
+            updatePhotoCount()
 
         } ?: run {
-            // For new records
             initialDate = selectedDate
+            etTitle.requestFocus()
+            etTitle.post {
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.showSoftInput(etTitle, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
         }
     }
 
@@ -346,8 +341,6 @@ class AddEditExpenseActivity : AppCompatActivity() {
             date = selectedDate,
             imagePaths = finalImagePaths
         )
-
-        // SHOW DIALOG INSTEAD OF SAVING IMMEDIATELY
         val isNew = existingExpense == null
         showSaveConfirmationDialog(expense, isNew)
     }
@@ -364,7 +357,7 @@ class AddEditExpenseActivity : AppCompatActivity() {
         val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
         val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
         val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btnDialogCancel)
+        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
         val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
 
         // Set Logic
@@ -378,11 +371,9 @@ class AddEditExpenseActivity : AppCompatActivity() {
             btnConfirm.text = "Update"
         }
 
-        // Show Details
         tvDetailTitle.text = expense.title
         tvDetailAmount.text = "Rs ${expense.amount}"
 
-        // Button Actions
         btnCancel.setOnClickListener { dialog.dismiss() }
 
         btnConfirm.setOnClickListener {
@@ -397,7 +388,7 @@ class AddEditExpenseActivity : AppCompatActivity() {
                     }
                 }
                 val resultIntent = Intent()
-                val isEdit = intent.hasExtra("expense_data") // Or however you check for edit mode
+                val isEdit = intent.hasExtra("expense_data")
 
                 if (isEdit) {
                     resultIntent.putExtra("toast_message", "Record Updated")
@@ -418,13 +409,11 @@ class AddEditExpenseActivity : AppCompatActivity() {
         val currentDesc = etDescription.text.toString().trim()
 
         if (existingExpense == null) {
-            // NEW RECORD: Check if anything is not empty/default
             return currentTitle.isNotEmpty() || currentAmount.isNotEmpty() ||
                     currentDesc.isNotEmpty() || selectedImagePaths.isNotEmpty() ||
                     selectedDate != initialDate
         }
 
-        // EXISTING RECORD: Compare current UI to the baseline
         return currentTitle != initialTitle ||
                 currentAmount != initialAmount ||
                 currentDesc != initialDescription ||
@@ -432,7 +421,6 @@ class AddEditExpenseActivity : AppCompatActivity() {
                 selectedImagePaths != initialImagePaths
     }
 
-    // 4. Back Action & Dialog
     private fun handleBackAction() {
         if (hasUnsavedChanges()) {
             showDiscardDialog()
@@ -450,8 +438,8 @@ class AddEditExpenseActivity : AppCompatActivity() {
 
         val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
         val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<android.view.View>(R.id.containerDetails)
-        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btnDialogCancel)
+        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
+        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
         val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
 
         tvTitle.text = "Discard Changes?"

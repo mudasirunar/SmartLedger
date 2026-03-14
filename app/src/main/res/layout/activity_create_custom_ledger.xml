@@ -1,0 +1,221 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/topAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/teal_main"
+            app:title="Setup Ledger (Step 1/3)"
+            app:titleTextColor="@color/white"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@color/white" />
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/stepProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:progress="33"
+            app:indicatorColor="@color/teal_dark"
+            app:trackColor="?attr/colorSurfaceVariant"
+            app:trackThickness="4dp" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ViewFlipper
+        android:id="@+id/viewFlipper"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:measureAllChildren="false">
+
+        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:padding="20dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Give your ledger a name and icon" android:textSize="18sp" android:textStyle="bold"/>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:gravity="center_vertical">
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnSelectIcon"
+                        android:layout_width="64dp" android:layout_height="64dp"
+                        app:cardCornerRadius="32dp" app:cardBackgroundColor="@color/tile_bg">
+                        <ImageView android:id="@+id/ivSelectedIcon" android:layout_width="32dp" android:layout_height="32dp" android:layout_gravity="center" android:src="@drawable/ic_star" app:tint="@color/teal_main" />
+                    </com.google.android.material.card.MaterialCardView>
+                    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="16dp" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:hint="Ledger Name">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etLedgerName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapSentences"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ledger Type" android:layout_marginTop="32dp" android:textStyle="bold"/>
+                <RadioGroup android:id="@+id/rgLedgerType" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+                    <RadioButton android:id="@+id/rbTypeRecord" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Simple Records" android:checked="true" android:padding="12dp"/>
+                    <RadioButton android:id="@+id/rbTypeDaily" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Daily Log" android:padding="12dp"/>
+                </RadioGroup>
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:padding="20dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/sectionStandardSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Date Settings" android:textSize="18sp" android:textStyle="bold"/>
+                    <RadioGroup android:id="@+id/rgDateMode" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+                        <RadioButton android:id="@+id/rbDateMonth" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Month Only" android:padding="12dp"/>
+                        <RadioButton android:id="@+id/rbDateSingle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Single Date" android:checked="true" android:padding="12dp"/>
+                        <RadioButton android:id="@+id/rbDateRange" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start and End Date Range" android:padding="12dp"/>
+                    </RadioGroup>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchPhotos"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp" android:checked="true" android:text="Allow Photo Attachments" />
+
+                    <LinearLayout
+                        android:id="@+id/containerPhotoLimit"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Max Photos" />
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu" android:layout_width="100dp" android:layout_height="wrap_content">
+                            <AutoCompleteTextView android:id="@+id/spinnerPhotoLimit" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="none" android:text="3" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/sectionDailySettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Unit Configuration" android:textSize="18sp" android:textStyle="bold"/>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:hint="Tracking Unit (e.g. Liters, Hours, Km)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etUnitLabel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Liters"
+                            android:inputType="text"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:hint="Default Price per Unit">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etUnitPrice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="0.0"
+                            android:inputType="numberDecimal"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:padding="20dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Define Fields" android:textSize="18sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Add specific fields you want to track for each entry." android:textSize="12sp" android:textColor="@color/text_secondary"/>
+                <TextView android:id="@+id/tvFieldsSubtitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Date and Amount are already included..." android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
+                <LinearLayout android:id="@+id/containerFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="16dp" />
+                <Button android:id="@+id/btnAddField" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="+ Add Field" android:textColor="@color/teal_main" />
+                <TextView
+                    android:id="@+id/tvMaxFieldsNote"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" Max 3 fields reached"
+                    android:textSize="12sp"
+                    android:textColor="@color/white"
+                    android:textStyle="italic"
+                    android:visibility="gone"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:layout_marginStart="4dp"
+                    android:paddingVertical="6dp"
+                    android:paddingHorizontal="14dp"
+                    android:drawableStart="@drawable/ic_info"
+                    android:drawablePadding="4dp"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_tag_teal_light" />
+            </LinearLayout>
+        </ScrollView>
+
+        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:padding="20dp" android:focusable="false" android:focusableInTouchMode="false">
+            <LinearLayout android:id="@+id/containerSmartPricing" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:focusable="false" android:focusableInTouchMode="false">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pricing Logic" android:textSize="18sp" android:textStyle="bold"/>
+                <TextView android:id="@+id/tvPricingSub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Set how you want to calculate amounts." android:textSize="12sp" android:textColor="@color/text_secondary"/>
+
+                <LinearLayout android:id="@+id/containerPricingRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="16dp" />
+            </LinearLayout>
+        </ScrollView>
+    </ViewFlipper>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="?android:colorBackground">
+
+        <TextView
+            android:id="@+id/btnBack"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_btn_pill_grey"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingVertical="12dp"
+            android:text="Back"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/btnNext"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Next"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingVertical="12dp"
+            android:background="@drawable/bg_btn_pill_teal"
+            android:backgroundTint="@color/teal_main"
+            android:elevation="2dp"
+            android:clickable="true"
+            android:focusable="true"/>
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,7 +1,5 @@
 package com.example.smartledger.activity
 
-import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -64,6 +62,7 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupWindowInsets()
         setupUI()
         setupGestures()
+        observeCustomLedgers()
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -73,7 +72,7 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     actionMode?.finish()
                 } else {
                     // Navigate back to Dashboard
-                    val intent = Intent(this@MilkActivity, MainActivity::class.java) // Change Activity Name accordingly
+                    val intent = Intent(this@MilkActivity, MainActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     startActivity(intent)
                     finish()
@@ -100,10 +99,8 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         setSupportActionBar(topAppBar)
         topAppBar.setNavigationOnClickListener { finish() }
-
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
         navigationView.setNavigationItemSelectedListener(this)
-
         fabAdd = findViewById(R.id.fabAdd)
         tvEmpty = findViewById(R.id.tvEmpty)
 
@@ -112,7 +109,6 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         adapter = MilkMonthAdapter(
             onNormalClick = { record ->
                 if (actionMode != null) {
-                    // Adapter handles selection
                 } else {
                     val intent = Intent(this, ViewMilkActivity::class.java)
                     intent.putExtra("milk_data", record)
@@ -161,7 +157,6 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val btnAdd = dialogView.findViewById<TextView>(R.id.btnAdd)
         val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
 
-        // Fetch the latest price from your records in the background
         lifecycleScope.launch(Dispatchers.IO) {
             val lastRecord = db.milkDao().getAllRaw().firstOrNull() // Get most recent
             val lastPrice = lastRecord?.pricePerLiter?.toInt()?.toString() ?: "220"
@@ -171,46 +166,34 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
 
-        // --- SETUP SPINNER ---
         val months = arrayOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
-
-        // Use built-in layout for dropdown items
         val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, months)
         spinnerMonth.setAdapter(adapter)
-
-        // Default to Current Month
         val calendar = Calendar.getInstance()
         val currentMonth = calendar.get(Calendar.MONTH)
-        spinnerMonth.setText(months[currentMonth], false) // 'false' prevents filter from clearing list
-
-        // SET DEFAULT YEAR
+        spinnerMonth.setText(months[currentMonth], false)
         val currentYear = calendar.get(Calendar.YEAR)
         etYear.setText(currentYear.toString())
 
-        // Feb Logic
         spinnerMonth.setOnItemClickListener { _, _, position, _ ->
             if (adapter.getItem(position) == "February") layoutFeb.visibility = View.VISIBLE else layoutFeb.visibility = View.GONE
         }
 
-        // Check initial state
         if (currentMonth == 1) layoutFeb.visibility = View.VISIBLE
 
         btnCancel.setOnClickListener { dialog.dismiss() }
 
         btnAdd.setOnClickListener {
-            // ... (Your existing Save Logic remains the same) ...
             val priceStr = etPrice.text.toString()
             val yearStr = etYear.text.toString()
             if (priceStr.isEmpty()) { etPrice.error = "Required"; return@setOnClickListener }
             if (yearStr.isEmpty() || yearStr.length != 4) { etYear.error = "Invalid Year"; return@setOnClickListener }
 
-            val selectedYear = yearStr.toInt() // Use this year
+            val selectedYear = yearStr.toInt()
             val monthName = spinnerMonth.text.toString()
             val monthIndex = months.indexOf(monthName)
-
-            // Determine Days Logic
             val daysInMonth = when(monthIndex) {
-                1 -> { // Feb
+                1 -> {
                     val d = etFebDays.text.toString().toIntOrNull()
                     if (d == null || (d != 28 && d != 29)) {
                         etFebDays.error = "Enter 28 or 29"
@@ -218,12 +201,11 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                     d
                 }
-                3, 5, 8, 10 -> 30 // Apr, Jun, Sep, Nov
+                3, 5, 8, 10 -> 30
                 else -> 31
             }
 
             val dailyEntries = (1..daysInMonth).map { DailyEntry(it, 0.0) }
-
             val record = MilkRecord(
                 monthName = "$monthName $selectedYear",
                 monthIndex = monthIndex,
@@ -233,9 +215,15 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             )
 
             lifecycleScope.launch {
-                db.milkDao().insert(record)
+                withContext(Dispatchers.IO) {
+                    db.milkDao().insert(record)
+                }
                 Toast.makeText(this@MilkActivity, "Month Added", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
+
+                val intent = Intent(this@MilkActivity, ViewMilkActivity::class.java)
+                intent.putExtra("milk_data", record)
+                startActivity(intent)
             }
         }
         dialog.show()
@@ -262,10 +250,9 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    // --- Action Mode ---
     private val actionModeCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            mode.menuInflater.inflate(R.menu.contextual_expense_menu, menu)
+            mode.menuInflater.inflate(R.menu.contextual_menu, menu)
             mode.title = "0 Selected"
             window.statusBarColor = getColor(R.color.teal_dark)
             fabAdd.hide()
@@ -281,11 +268,9 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 R.id.action_select_all -> {
                     if (adapter.isAllSelected()) {
                         adapter.deselectAll()
-                        // Icon updates automatically via onSelectionChange
                         Toast.makeText(this@MilkActivity, "Deselected All", Toast.LENGTH_SHORT).show()
                     } else {
                         adapter.selectAll()
-                        // Icon updates automatically via onSelectionChange
                         Toast.makeText(this@MilkActivity, "Selected All", Toast.LENGTH_SHORT).show()
                     }
                     true
@@ -353,7 +338,6 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     db.milkDao().softDelete(ids, System.currentTimeMillis())
                 }
 
-                // Logic for singular/plural Toast
                 val message = if (ids.size == 1) "Item moved to Trash" else "${ids.size} items moved to Trash"
                 Toast.makeText(this@MilkActivity, message, Toast.LENGTH_SHORT).show()
 
@@ -363,7 +347,6 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         dialog.show()
     }
 
-    // --- Menus ---
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.milk_menu, menu)
         return true
@@ -403,48 +386,63 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         drawerLayout.closeDrawer(GravityCompat.START)
+
+        val id = item.itemId
+
         Handler(Looper.getMainLooper()).postDelayed({
-            when (item.itemId) {
-                R.id.nav_dashboard -> {
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            lifecycleScope.launch {
+                val customLedgers = withContext(Dispatchers.IO) { db.customLedgerDao().getAllLedgersList() }
+                val clickedLedger = customLedgers.find { (it.id + 1000) == id }
+
+                if (clickedLedger != null) {
+                    val intent = Intent(this@MilkActivity, GenericLedgerActivity::class.java)
+                    intent.putExtra("ledger_template", clickedLedger)
                     startActivity(intent)
                     finish()
-                }
-                R.id.nav_electricity -> {
-                    val intent = Intent(this, ElectricityActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish() // Close Milk
-                }
-                R.id.nav_milk -> {
-                    // Already Here - Do Nothing
-                }
-                R.id.nav_expenses -> {
-                    val intent = Intent(this, ExpenseActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish() // Close Milk
-                }
-                R.id.nav_analytics -> {
-                    val intent = Intent(this, AnalyticsActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_trash -> {
-                    startActivity(Intent(this, TrashBinActivity::class.java))
-                    finish() // Close Milk
-                }
-                R.id.nav_calculator -> {
-                    startActivity(Intent(this, CalculatorActivity::class.java))
-                }
-                R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    startActivity(intent)
-                    finish()
-                    Toast.makeText(this, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
+                } else {
+                    when (id) {
+                        R.id.nav_dashboard -> {
+                            val intent = Intent(this@MilkActivity, MainActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_electricity -> {
+                            val intent = Intent(this@MilkActivity, ElectricityActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_milk -> {/* Already Here*/}
+                        R.id.nav_expenses -> {
+                            val intent = Intent(this@MilkActivity, ExpenseActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_analytics -> {
+                            val intent = Intent(this@MilkActivity, AnalyticsActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_trash -> {
+                            val intent = Intent(this@MilkActivity, TrashBinActivity::class.java)
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_calculator -> {
+                            val intent = Intent(this@MilkActivity, CalculatorActivity::class.java)
+                            startActivity(intent)
+                        }
+                        R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
+                            val intent = Intent(this@MilkActivity, MainActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            startActivity(intent)
+                            finish()
+                            Toast.makeText(this@MilkActivity, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         }, 250)
@@ -483,27 +481,56 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setupHeader() {
         val navView = findViewById<NavigationView>(R.id.navigationView)
         val headerView = navView.getHeaderView(0)
-
-        // Use findViewById on the headerView, not the activity
         val tvName = headerView.findViewById<TextView>(R.id.headerName)
         val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
 
         val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
 
-        // 1. Load the data
         tvName.text = prefs.getString("user_name", "Enter your name")
         tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
 
-        // 2. The Safety Check: Only allow editing if we are in MainActivity
         if (this is MainActivity) {
             tvName.setOnClickListener {
-                // This call is now safe because 'this' is confirmed as MainActivity
                 this.showEditNameDialog(tvName)
             }
         } else {
-            // In other activities, remove the edit icon/arrow if you added one
             tvName.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             tvName.setOnClickListener(null)
+        }
+    }
+
+    private fun observeCustomLedgers() {
+        lifecycleScope.launch {
+            db.customLedgerDao().getAllLedgers().collect { ledgers ->
+                val navigationView = findViewById<NavigationView>(R.id.navigationView)
+                val menu = navigationView.menu
+                val staticIds = setOf(R.id.nav_dashboard, R.id.nav_electricity, R.id.nav_milk, R.id.nav_expenses)
+                val toRemove = mutableListOf<Int>()
+
+                for (i in 0 until menu.size()) {
+                    val item = menu.getItem(i)
+                    if (item.groupId == R.id.group_main && !staticIds.contains(item.itemId)) {
+                        toRemove.add(item.itemId)
+                    }
+                }
+
+                toRemove.forEach { menu.removeItem(it) }
+
+                ledgers.forEachIndexed { index, ledger ->
+                    val iconResId = resources.getIdentifier(ledger.iconName, "drawable", packageName)
+
+                    val menuItem = menu.add(
+                        R.id.group_main,
+                        ledger.id + 1000,
+                        10 + index,
+                        ledger.name
+                    )
+
+                    menuItem.setIcon(if (iconResId != 0) iconResId else R.drawable.ic_star)
+                    menuItem.setCheckable(true)
+                    menuItem.icon?.setTint(androidx.core.content.ContextCompat.getColor(this@MilkActivity, R.color.teal_main))
+                }
+            }
         }
     }
 }

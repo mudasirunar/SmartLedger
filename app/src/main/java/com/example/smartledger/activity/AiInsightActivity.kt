@@ -1,6 +1,6 @@
 package com.example.smartledger.activity
 
-import AiHelper
+import com.example.smartledger.util.AiHelper
 import android.animation.ValueAnimator
 import android.graphics.Color
 import android.graphics.LinearGradient
@@ -55,7 +55,6 @@ class AiInsightActivity : AppCompatActivity() {
         val rootLayout = findViewById<View>(R.id.aiRootLayout)
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Apply top padding for status bar and bottom for nav bar
             view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
@@ -99,7 +98,6 @@ class AiInsightActivity : AppCompatActivity() {
         loaderContainer.addView(progressIndicator)
     }
 
-    // MANUALLY HANDLE THEME CHANGE
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         theme.applyStyle(R.style.Theme_SmartLedger, true)
@@ -111,12 +109,10 @@ class AiInsightActivity : AppCompatActivity() {
         findViewById<View>(R.id.aiRootLayout).setBackgroundColor(bgColor)
         findViewById<LinearLayout>(R.id.bottomContainer).setBackgroundColor(surfaceColor)
 
-        // REFRESH SPANS: This forces the Spannable to re-read the theme color
         val currentText = tvContent.text
         if (currentText is android.text.Spannable) {
             val spans = currentText.getSpans(0, currentText.length, android.text.style.ForegroundColorSpan::class.java)
             for (span in spans) {
-                // Keep error text Red, update everything else to the new Theme color
                 if (span.foregroundColor != Color.RED) {
                     val start = currentText.getSpanStart(span)
                     val end = currentText.getSpanEnd(span)
@@ -148,15 +144,9 @@ class AiInsightActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val startPos = tvContent.text.length
-            // Dynamic delay: If text is very long, speed it up even more
             val delayTime = if (text.length > 500) 1L else if (isAppend) 2L else 5L
-
-            // Use a local buffer to avoid constant TextView re-calculation
             text.forEachIndexed { index, char ->
                 tvContent.append(char.toString())
-
-                // PERFORMANCE FIX: Don't apply spans character-by-character.
-                // Only apply the theme color span every 20 characters or at the very end.
                 if (isAppend && (index % 20 == 0 || index == text.length - 1)) {
                     val spannable = tvContent.text as android.text.Spannable
                     spannable.setSpan(
@@ -165,19 +155,13 @@ class AiInsightActivity : AppCompatActivity() {
                         android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
                 }
-
-                // Haptic frequency: Less frequent = more performance
                 if (index % 12 == 0) playSubtleTick()
 
                 kotlinx.coroutines.delay(delayTime)
-
-                // Auto-scroll optimization
                 if (index % 5 == 0) {
                     findViewById<NestedScrollView>(R.id.scrollContent).fullScroll(View.FOCUS_DOWN)
                 }
             }
-
-            // Final scroll and haptic
             findViewById<NestedScrollView>(R.id.scrollContent).fullScroll(View.FOCUS_DOWN)
             playCompletionHaptic()
 
@@ -187,17 +171,15 @@ class AiInsightActivity : AppCompatActivity() {
     private fun playSubtleTick() {
         val vibrator = getVibrator()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Lightest possible tick
             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
         } else {
-            vibrator.vibrate(2) // Ultra short burst
+            vibrator.vibrate(2)
         }
     }
 
     private fun playCompletionHaptic() {
         val vibrator = getVibrator()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // A satisfying solid thump
             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
         } else {
             vibrator.vibrate(40)
@@ -220,7 +202,6 @@ class AiInsightActivity : AppCompatActivity() {
         tvContent.visibility = View.GONE
         progressIndicator.visibility = View.VISIBLE
 
-        // Ensure the bottom button is totally hidden on initial error
         findViewById<LinearLayout>(R.id.bottomContainer).visibility = View.GONE
 
         startLogoAnimation()
@@ -236,13 +217,10 @@ class AiInsightActivity : AppCompatActivity() {
                 tvWaking.setTextColor(Color.RED)
                 ivErrorIcon.visibility = View.VISIBLE
                 btnRetry.visibility = View.VISIBLE
-                // Bottom container stays hidden!
             } else {
                 isErrorActive = false
                 stopLogoAnimation()
                 loadingLayout.visibility = View.GONE
-
-                // Show the bottom section only now
                 findViewById<LinearLayout>(R.id.bottomContainer).visibility = View.VISIBLE
                 startTypewriterEffect(AiHelper.formatAiResponse(result))
             }
@@ -286,12 +264,11 @@ class AiInsightActivity : AppCompatActivity() {
         }
     }
 
-    // UPDATED: Standard header color for Ledger AI (Deep Blue/Teal)
     private fun applyLedgerHeader() {
         val toolbar = findViewById<MaterialToolbar>(R.id.aiToolbar)
         val colors = intArrayOf(
-            Color.parseColor("#1A237E"), // Deep Blue
-            Color.parseColor("#006064"), // Dark Teal
+            Color.parseColor("#1A237E"),
+            Color.parseColor("#006064"),
             Color.parseColor("#1A237E")
         )
         val gradientDrawable = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors)
@@ -303,9 +280,7 @@ class AiInsightActivity : AppCompatActivity() {
 
 
     private fun startLogoAnimation() {
-        // Always cancel existing ones first if you're restarting the task
         stopLogoAnimation()
-
         logoAnimator = ValueAnimator.ofFloat(0.35f, 0.65f).apply {
             duration = 1000
             repeatMode = ValueAnimator.REVERSE

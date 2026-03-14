@@ -34,13 +34,12 @@ class CalculatorActivity : AppCompatActivity() {
 
     private lateinit var tvInput: TextView
     private lateinit var tvResult: TextView
-    private lateinit var inputScrollView: ScrollView // New reference
+    private lateinit var inputScrollView: ScrollView
     private lateinit var keypadGrid: GridLayout
     private lateinit var rvHistory: RecyclerView
     private lateinit var btnHistoryToggle: ImageButton
     private lateinit var db: AppDatabase
     private lateinit var historyAdapter: HistoryAdapter
-
     private var lastNumeric: Boolean = false
     private var stateError: Boolean = false
     private var lastDot: Boolean = false
@@ -51,7 +50,7 @@ class CalculatorActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_calculator)
 
-        db = AppDatabase.Companion.getDatabase(this)
+        db = AppDatabase.getDatabase(this)
 
         setupWindowInsets()
         setupToolbar()
@@ -128,9 +127,7 @@ class CalculatorActivity : AppCompatActivity() {
         tvInput = findViewById(R.id.tvInput)
         tvResult = findViewById(R.id.tvResult)
         tvResult.movementMethod = ScrollingMovementMethod()
-        inputScrollView = findViewById(R.id.inputScrollView) // Init ScrollView
-
-        // --- ENABLE AUTO SCROLL ---
+        inputScrollView = findViewById(R.id.inputScrollView)
         tvInput.addOnLayoutChangeListener { _, _, _, _, bottom, _, _, _, oldBottom ->
             if (bottom != oldBottom) {
                 inputScrollView.post { inputScrollView.fullScroll(View.FOCUS_DOWN) }
@@ -245,55 +242,29 @@ class CalculatorActivity : AppCompatActivity() {
                 db.calcDao().insert(CalcHistory(expression = txt, result = liveRes))
             }
 
-            // --- ANIMATION SETUP ---
-
-            // 1. Calculate exact scale so Result becomes exactly the size of Input
             val scaleFactor = tvInput.textSize / tvResult.textSize
-
-            // 2. Set Pivot to the RIGHT edge.
-            // This ensures that when it grows, it grows to the Left, keeping it on screen.
             tvResult.pivotX = tvResult.width.toFloat()
-            tvResult.pivotY = tvResult.height.toFloat() // Anchor to bottom
-
-            // 3. Calculate exact Y distance
-            // We want the bottom of Result to align with the bottom of Input ideally,
-            // but aligning Tops is easier for the translation calculation.
-            // We adjust by height difference to make it line up perfectly.
+            tvResult.pivotY = tvResult.height.toFloat()
             val inputBottom = tvInput.y + tvInput.height
             val resultBottom = tvResult.y + tvResult.height
-            val distanceY = -(resultBottom - inputBottom) // Move Up
-
-            // --- START ANIMATION ---
-
-            // Fade out the old input
+            val distanceY = -(resultBottom - inputBottom)
             tvInput.animate().alpha(0f).setDuration(300).start()
-
-            // Animate Result into position
             tvResult.animate()
                 .translationY(distanceY)
                 .scaleX(scaleFactor)
                 .scaleY(scaleFactor)
-                .setDuration(400) // Slightly slower for smoothness
-                .setInterpolator(AccelerateDecelerateInterpolator()) // Natural ease-in/out
+                .setDuration(400)
+                .setInterpolator(AccelerateDecelerateInterpolator())
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
-                        // --- RESET STATE ---
-
-                        // 1. Set the final text to the Input view
                         tvInput.text = liveRes
                         tvInput.alpha = 1f
-
-                        // 2. Reset the Result view instantly to its original state
                         tvResult.text = ""
                         tvResult.translationY = 0f
                         tvResult.scaleX = 1f
                         tvResult.scaleY = 1f
-
-                        // Reset pivot to center (good practice for future animations)
                         tvResult.pivotX = tvResult.width / 2f
                         tvResult.pivotY = tvResult.height / 2f
-
-                        // Update logic flags
                         lastDot = liveRes.contains(".")
                     }
                 })
@@ -357,7 +328,6 @@ class CalculatorActivity : AppCompatActivity() {
         }
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            // Standard haptic tick for modern devices
             vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK))
         } else {
             // Backward compatibility for older devices (10ms burst)

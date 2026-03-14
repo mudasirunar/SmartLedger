@@ -18,13 +18,12 @@ class PhotoViewAdapter(
         val imageView: ImageView = itemView.findViewById(R.id.imgPhoto)
 
         fun bind(path: String) {
-            // Glide handles the background loading and memory management
             Glide.with(itemView.context)
                 .load(path)
-                .centerCrop() // Fills the square nicely
-                .transition(DrawableTransitionOptions.withCrossFade()) // Smooth appearance
-                .placeholder(R.color.tile_bg) // Neutral color while loading
-                .error(R.drawable.ic_error_outline) // Fallback if file is missing
+                .centerCrop()
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .placeholder(R.color.tile_bg)
+                .error(R.drawable.ic_error_outline)
                 .into(imageView)
 
             itemView.setOnClickListener { onImageClick(path) }

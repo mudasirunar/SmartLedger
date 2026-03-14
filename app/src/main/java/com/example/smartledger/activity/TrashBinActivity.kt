@@ -28,6 +28,7 @@ import com.example.smartledger.data.AppDatabase
 import com.example.smartledger.data.TrashItem
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -52,6 +53,7 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         setupWindowInsets()
         setupUI()
         setupGestures()
+        observeCustomLedgers()
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -61,7 +63,7 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
                     actionMode?.finish()
                 } else {
                     // Navigate back to Dashboard
-                    val intent = Intent(this@TrashBinActivity, MainActivity::class.java) // Change Activity Name accordingly
+                    val intent = Intent(this@TrashBinActivity, MainActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     startActivity(intent)
                     finish()
@@ -70,11 +72,14 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         })
 
         // Auto Cleanup logic
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val fifteenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(15)
+
             db.expenseDao().deleteExpiredTrash(fifteenDaysAgo)
             db.electricityDao().deleteExpiredTrash(fifteenDaysAgo)
             db.milkDao().deleteExpiredTrash(fifteenDaysAgo)
+            db.customLedgerDao().deleteExpiredTrash(fifteenDaysAgo)
+            db.customLedgerDao().autoCleanExpiredLedgers(fifteenDaysAgo)
         }
 
         loadTrashItems()
@@ -124,17 +129,47 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
             val expensesFlow = db.expenseDao().getTrashExpenses()
             val electricityFlow = db.electricityDao().getTrashRecords()
             val milkFlow = db.milkDao().getTrashRecords()
+            val trashedEntriesFlow = db.customLedgerDao().getAllTrashEntries()
+            val trashedLedgersFlow = db.customLedgerDao().getTrashedLedgers()
+            val trashedDailyRecordsFlow = db.customLedgerDao().getTrashedDailyRecords()
 
-            // Combine flows into one List<TrashItem>
-            combine(expensesFlow, electricityFlow, milkFlow) { expenses, electrics, milks -> // combine 3 flows
-                val list1 = expenses.map { TrashItem.ExpenseItem(it) }
-                val list2 = electrics.map { TrashItem.ElectricityItem(it) }
-                val list3 = milks.map { TrashItem.MilkItem(it) }
-                (list1 + list2 + list3).sortedByDescending { it.deletedAt }
+            combine(expensesFlow, electricityFlow, milkFlow, trashedEntriesFlow, trashedLedgersFlow, trashedDailyRecordsFlow) {
+                    arrays ->
+                val exp = arrays[0] as List<*>
+                val elec = arrays[1] as List<*>
+                val milk = arrays[2] as List<*>
+                val entries = arrays[3] as List<*>
+                val ledgers = arrays[4] as List<*>
+                val dailyRecords = arrays[5] as List<*>
+                val trashedLedgerIds = (ledgers.filterIsInstance<com.example.smartledger.data.CustomLedger>()).map { it.id }.toSet()
+                val list1 = exp.filterIsInstance<com.example.smartledger.data.Expense>().map { TrashItem.ExpenseItem(it) }
+                val list2 = elec.filterIsInstance<com.example.smartledger.data.Electricity>().map { TrashItem.ElectricityItem(it) }
+                val list3 = milk.filterIsInstance<com.example.smartledger.data.MilkRecord>().map { TrashItem.MilkItem(it) }
+                val list4 = entries.filterIsInstance<com.example.smartledger.data.CustomEntry>()
+                    .filter { it.ledgerId !in trashedLedgerIds }
+                    .map { entry ->
+                        val ledgerName = db.customLedgerDao().getLedgerById(entry.ledgerId)?.name ?: "Unknown"
+                        TrashItem.CustomEntryItem(entry, ledgerName)
+                    }
+                val list5 = dailyRecords.filterIsInstance<com.example.smartledger.data.CustomDailyRecord>()
+                    .filter { it.ledgerId !in trashedLedgerIds }
+                    .map { record ->
+                        val ledgerName = db.customLedgerDao().getLedgerById(record.ledgerId)?.name ?: "Unknown"
+                        TrashItem.CustomDailyRecordItem(record, ledgerName)
+                    }
+
+                val list6 = (ledgers.filterIsInstance<com.example.smartledger.data.CustomLedger>()).map { ledger ->
+                    val entryCount = if (ledger.deletedAt != null) {
+                        val regularCount = db.customLedgerDao().getCountDeletedWithLedger(ledger.id, ledger.deletedAt!!)
+                        val dailyCount = db.customLedgerDao().getDailyRecordsCountDeletedWithLedger(ledger.id, ledger.deletedAt!!)
+                        regularCount + dailyCount
+                    } else 0
+                    TrashItem.TrashedLedgerItem(ledger, entryCount)
+                }
+                (list1 + list2 + list3 + list4 + list5 + list6).sortedByDescending { it.deletedAt }
             }.collect { fullList ->
                 adapter.submitList(fullList)
                 tvEmpty.visibility = if (fullList.isEmpty()) View.VISIBLE else View.GONE
-                supportActionBar?.subtitle = "${fullList.size} Items"
             }
         }
     }
@@ -146,13 +181,13 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         val dialog = builder.create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<android.view.View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
+        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
+        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
+        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
         val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
+        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
 
 
         btnConfirm.text = "Recover"
@@ -163,7 +198,6 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
             tvMessage.text = "Restore this item?"
             containerDetails.visibility = View.VISIBLE
 
-            // Extract data based on type
             when(item) {
                 is TrashItem.ElectricityItem -> {
                     tvDetailTitle.text = "${item.data.totalUnits ?: 0} Units"
@@ -177,6 +211,23 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
                     tvDetailTitle.text = item.data.title
                     tvDetailAmount.text = "Rs ${item.data.amount}"
                 }
+                is TrashItem.TrashedLedgerItem -> {
+                    tvDetailTitle.text = item.ledger.name
+                    tvDetailAmount.text = "${item.entryCount} Records"
+                    tvDetailAmount.setTextColor(getColor(R.color.teal_main))
+                }
+                is TrashItem.CustomEntryItem -> {
+                    val type = object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type
+                    val dataMap: Map<String, String>? = try { Gson().fromJson(item.entry.dataJson, type) } catch (e: Exception) { null }
+                    val userFields = dataMap?.filterKeys { it != "SYS_END_DATE" }
+                    val firstNonEmpty = userFields?.values?.firstOrNull { it.trim().isNotEmpty() }
+                    tvDetailTitle.text = firstNonEmpty ?: item.ledgerName
+                    tvDetailAmount.text = "Rs ${item.entry.amount ?: 0.0}"
+                }
+                is TrashItem.CustomDailyRecordItem -> {
+                    tvDetailTitle.text = item.record.monthName
+                    tvDetailAmount.text = "Rs ${item.record.totalAmount.toInt()}"
+                }
             }
         } else {
             tvTitle.text = "Recover Items"
@@ -186,23 +237,34 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
-            recoverItems(items, mode) // Call helper function
+            recoverItems(items, mode)
             dialog.dismiss()
         }
         dialog.show()
     }
-
-    // Helper to perform recovery logic
     private fun recoverItems(items: List<TrashItem>, mode: ActionMode?) {
         lifecycleScope.launch {
             val expenseIds = items.filterIsInstance<TrashItem.ExpenseItem>().map { it.data.id }
             val elecIds = items.filterIsInstance<TrashItem.ElectricityItem>().map { it.data.id }
             val milkIds = items.filterIsInstance<TrashItem.MilkItem>().map { it.data.id }
+            val ledgerItems = items.filterIsInstance<TrashItem.TrashedLedgerItem>()
+            val customEntryIds = items.filterIsInstance<TrashItem.CustomEntryItem>().map { it.entry.id }
 
             withContext(Dispatchers.IO) {
                 if (expenseIds.isNotEmpty()) db.expenseDao().restoreExpenses(expenseIds)
                 if (elecIds.isNotEmpty()) db.electricityDao().restore(elecIds)
                 if (milkIds.isNotEmpty()) db.milkDao().restore(milkIds)
+                if (customEntryIds.isNotEmpty()) db.customLedgerDao().restoreEntries(customEntryIds)
+                val dailyRecordIds = items.filterIsInstance<TrashItem.CustomDailyRecordItem>().map { it.record.id }
+                if (dailyRecordIds.isNotEmpty()) db.customLedgerDao().restoreDailyRecords(dailyRecordIds)
+
+                ledgerItems.forEach {
+                    db.customLedgerDao().restoreLedger(it.ledger.id)
+                    if (it.ledger.deletedAt != null) {
+                        db.customLedgerDao().restoreEntriesByLedgerTimestamp(it.ledger.id, it.ledger.deletedAt!!)
+                        db.customLedgerDao().restoreDailyRecordsByLedgerTimestamp(it.ledger.id, it.ledger.deletedAt!!)
+                    }
+                }
             }
 
             val toastMessage = if (items.size == 1) {
@@ -223,13 +285,13 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         val dialog = builder.create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<android.view.View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
+        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
+        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
+        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
+        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
+        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
 
         tvTitle.text = "Delete Permanently"
         btnConfirm.text = "Delete"
@@ -252,6 +314,24 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
                     tvDetailTitle.text = item.data.title
                     tvDetailAmount.text = "Rs ${item.data.amount}"
                 }
+                is TrashItem.TrashedLedgerItem -> {
+                    tvDetailTitle.text = item.ledger.name
+                    tvDetailAmount.text = "${item.entryCount} Records"
+                    tvDetailAmount.setTextColor(getColor(R.color.teal_main))
+                }
+                is TrashItem.CustomEntryItem -> {
+                    val type = object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type
+                    val dataMap: Map<String, String>? = try { Gson().fromJson(item.entry.dataJson, type) } catch (e: Exception) { null }
+                    val userFields = dataMap?.filterKeys { it != "SYS_END_DATE" }
+
+                    val firstNonEmpty = userFields?.values?.firstOrNull { it.trim().isNotEmpty() }
+                    tvDetailTitle.text = firstNonEmpty ?: item.ledgerName
+                    tvDetailAmount.text = "Rs ${item.entry.amount ?: 0.0}"
+                }
+                is TrashItem.CustomDailyRecordItem -> {
+                    tvDetailTitle.text = item.record.monthName
+                    tvDetailAmount.text = "Rs ${item.record.totalAmount.toInt()}"
+                }
             }
         } else {
             tvMessage.text = "Delete these ${items.size} items permanently?"
@@ -266,18 +346,26 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         dialog.show()
     }
 
-    // Helper to perform hard delete logic
     private fun performHardDelete(items: List<TrashItem>, mode: ActionMode?) {
         lifecycleScope.launch {
             val expenseIds = items.filterIsInstance<TrashItem.ExpenseItem>().map { it.data.id }
             val elecIds = items.filterIsInstance<TrashItem.ElectricityItem>().map { it.data.id }
             val milkIds = items.filterIsInstance<TrashItem.MilkItem>().map { it.data.id }
+            val ledgerItems = items.filterIsInstance<TrashItem.TrashedLedgerItem>()
+            val customEntryIds = items.filterIsInstance<TrashItem.CustomEntryItem>().map { it.entry.id }
 
             withContext(Dispatchers.IO) {
                 if (expenseIds.isNotEmpty()) db.expenseDao().hardDeleteExpenses(expenseIds)
                 if (elecIds.isNotEmpty()) db.electricityDao().hardDelete(elecIds)
                 if (milkIds.isNotEmpty()) db.milkDao().hardDelete(milkIds)
-            }
+                if (customEntryIds.isNotEmpty()) db.customLedgerDao().hardDeleteEntries(customEntryIds)
+                val dailyRecordIds = items.filterIsInstance<TrashItem.CustomDailyRecordItem>().map { it.record.id }
+                if (dailyRecordIds.isNotEmpty()) db.customLedgerDao().hardDeleteDailyRecords(dailyRecordIds)
+
+                ledgerItems.forEach {
+                    db.customLedgerDao().permanentlyDeleteLedger(it.ledger.id)
+                    db.customLedgerDao().hardDeleteDailyRecordsByLedger(it.ledger.id)
+                }            }
 
             val toastMessage = if (items.size == 1) {
                 "Item Deleted Permanently"
@@ -297,11 +385,11 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         val dialog = builder.create()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<android.view.View>(R.id.containerDetails)
-        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
+        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
+        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
+        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
+        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
+        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
 
         tvTitle.text = "Trash Info"
         tvMessage.text = "Items in the Trash Bin are stored for 15 days. After that, they are permanently deleted automatically."
@@ -314,7 +402,6 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         dialog.show()
     }
 
-    // --- Action Mode ---
     private val actionModeCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
             mode.menuInflater.inflate(R.menu.contextual_trash_menu, menu)
@@ -392,50 +479,62 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         drawerLayout.closeDrawer(GravityCompat.START)
+        val id = item.itemId
+
         Handler(Looper.getMainLooper()).postDelayed({
-            when (item.itemId) {
-                R.id.nav_dashboard -> {
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            lifecycleScope.launch {
+                val customLedgers = withContext(Dispatchers.IO) { db.customLedgerDao().getAllLedgersList() }
+                val clickedLedger = customLedgers.find { (it.id + 1000) == id }
+
+                if (clickedLedger != null) {
+                    val intent = Intent(this@TrashBinActivity, GenericLedgerActivity::class.java)
+                    intent.putExtra("ledger_template", clickedLedger)
                     startActivity(intent)
                     finish()
-                }
-                R.id.nav_electricity -> {
-                    val intent = Intent(this, ElectricityActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_milk -> {
-                    val intent = Intent(this, MilkActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_expenses -> {
-                    val intent = Intent(this, ExpenseActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_analytics -> {
-                    val intent = Intent(this, AnalyticsActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_trash -> {
-                    //Already Here
-                }
-                R.id.nav_calculator -> {
-                    startActivity(Intent(this, CalculatorActivity::class.java))
-                }
-                R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    startActivity(intent)
-                    finish()
-                    Toast.makeText(this, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
+                } else {
+                    when (id) {
+                        R.id.nav_dashboard -> {
+                            val intent = Intent(this@TrashBinActivity, MainActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_electricity -> {
+                            val intent = Intent(this@TrashBinActivity, ElectricityActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_milk -> {
+                            val intent = Intent(this@TrashBinActivity, MilkActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_expenses -> {
+                            val intent = Intent(this@TrashBinActivity, ExpenseActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_analytics -> {
+                            val intent = Intent(this@TrashBinActivity, AnalyticsActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_trash -> { /* Already here */ }
+                        R.id.nav_calculator -> {
+                            startActivity(Intent(this@TrashBinActivity, CalculatorActivity::class.java))
+                        }
+                        R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
+                            val intent = Intent(this@TrashBinActivity, MainActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            startActivity(intent)
+                            finish()
+                            Toast.makeText(this@TrashBinActivity, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         }, 250)
@@ -474,27 +573,54 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
     private fun setupHeader() {
         val navView = findViewById<NavigationView>(R.id.navigationView)
         val headerView = navView.getHeaderView(0)
-
-        // Use findViewById on the headerView, not the activity
         val tvName = headerView.findViewById<TextView>(R.id.headerName)
         val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
 
         val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
 
-        // 1. Load the data
         tvName.text = prefs.getString("user_name", "Enter your name")
         tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
 
-        // 2. The Safety Check: Only allow editing if we are in MainActivity
         if (this is MainActivity) {
             tvName.setOnClickListener {
-                // This call is now safe because 'this' is confirmed as MainActivity
                 this.showEditNameDialog(tvName)
             }
         } else {
-            // In other activities, remove the edit icon/arrow if you added one
             tvName.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             tvName.setOnClickListener(null)
+        }
+    }
+    private fun observeCustomLedgers() {
+        lifecycleScope.launch {
+            db.customLedgerDao().getAllLedgers().collect { ledgers ->
+                val navigationView = findViewById<NavigationView>(R.id.navigationView)
+                val menu = navigationView.menu
+                val staticIds = setOf(R.id.nav_dashboard, R.id.nav_electricity, R.id.nav_milk, R.id.nav_expenses)
+                val toRemove = mutableListOf<Int>()
+
+                for (i in 0 until menu.size()) {
+                    val item = menu.getItem(i)
+                    if (item.groupId == R.id.group_main && !staticIds.contains(item.itemId)) {
+                        toRemove.add(item.itemId)
+                    }
+                }
+                toRemove.forEach { menu.removeItem(it) }
+
+                ledgers.forEachIndexed { index, ledger ->
+                    val iconResId = resources.getIdentifier(ledger.iconName, "drawable", packageName)
+
+                    val menuItem = menu.add(
+                        R.id.group_main,
+                        ledger.id + 1000,
+                        10 + index,
+                        ledger.name
+                    )
+
+                    menuItem.setIcon(if (iconResId != 0) iconResId else R.drawable.ic_star)
+                    menuItem.setCheckable(true)
+                    menuItem.icon?.setTint(androidx.core.content.ContextCompat.getColor(this@TrashBinActivity, R.color.teal_main))
+                }
+            }
         }
     }
 }

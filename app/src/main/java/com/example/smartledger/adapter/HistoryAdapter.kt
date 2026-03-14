@@ -27,8 +27,6 @@ class HistoryAdapter(private val onClick: (String) -> Unit) : RecyclerView.Adapt
         holder.tvExpression.text = item.expression
         holder.tvResult.text = "= ${item.result}"
         holder.tvResult.setTextColor(holder.itemView.context.getColor(com.example.smartledger.R.color.teal_main))
-
-        // Click to reuse result
         holder.itemView.setOnClickListener { onClick(item.result) }
     }
 

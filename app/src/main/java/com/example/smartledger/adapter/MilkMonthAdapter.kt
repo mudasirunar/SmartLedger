@@ -23,7 +23,6 @@ class MilkMonthAdapter(
     private val selectedItems = mutableSetOf<Int>()
     private var isSelectionMode = false
 
-    // --- SELECTION LOGIC ---
 
     fun toggleSelection(position: Int) {
         val item = getItem(position)
@@ -76,7 +75,6 @@ class MilkMonthAdapter(
         return currentList.filter { selectedItems.contains(it.id) }
     }
 
-    // --- VIEW HOLDER & BINDING ---
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -113,29 +111,24 @@ class MilkMonthAdapter(
         private val cardView: CardView = itemView as CardView
 
         fun bind(item: MilkRecord, isSelectionMode: Boolean, isSelected: Boolean) {
-            // 1. Bind Data
             tvMonth.text = item.monthName
             tvLiters.text = "${item.totalLiters} Liters"
-            tvAmount.text = "Rs %.0f".format(item.totalAmount) // %.0f removes decimals for cleaner look on main list
+            tvAmount.text = "Rs %.0f".format(item.totalAmount)
 
-            // 2. Handle Selection Visuals
             if (isSelectionMode) {
                 checkbox.visibility = View.VISIBLE
                 checkbox.isChecked = isSelected
 
                 if (isSelected) {
-                    // Selected State (Light Teal BG, Black Text)
                     cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.context, R.color.selected_item_bg))
                     tvMonth.setTextColor(Color.BLACK)
                     tvLiters.setTextColor(Color.DKGRAY)
                 } else {
-                    // Unselected State in Selection Mode
                     cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.context, R.color.tile_bg))
                     tvMonth.setTextColor(ContextCompat.getColor(itemView.context, R.color.text_primary))
                     tvLiters.setTextColor(ContextCompat.getColor(itemView.context, R.color.text_secondary))
                 }
             } else {
-                // Normal Mode
                 checkbox.visibility = View.GONE
                 cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.context, R.color.tile_bg))
 

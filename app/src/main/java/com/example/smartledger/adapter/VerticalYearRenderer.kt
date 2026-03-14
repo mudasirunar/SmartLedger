@@ -28,11 +28,8 @@ class VerticalYearRenderer(
         val dataSets = mChart.barData.dataSets
         val buffer = mBarBuffers
 
-        // --- FIX: Clip drawing to the content area ---
-        // This ensures text disappears immediately when the bar leaves the visible area
         c.save()
         c.clipRect(mViewPortHandler.contentRect)
-        // ---------------------------------------------
 
         for (i in dataSets.indices) {
             val dataSet = dataSets[i]
@@ -56,7 +53,6 @@ class VerticalYearRenderer(
                     val x = (left + right) / 2f
                     val y = (top + bottom) / 2f
 
-                    // Check bounds just to be safe, though clipRect handles the visuals
                     if (!mViewPortHandler.isInBoundsRight(left)) break
                     if (!mViewPortHandler.isInBoundsLeft(right)) continue
 
@@ -69,8 +65,6 @@ class VerticalYearRenderer(
                 }
             }
         }
-
-        // Restore the canvas so other things can draw normally
         c.restore()
     }
 }

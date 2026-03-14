@@ -29,25 +29,22 @@ import kotlinx.coroutines.withContext
 class ViewElectricityActivity : AppCompatActivity() {
 
     private var record: Electricity? = null
-    private lateinit var photoAdapter: PhotoViewAdapter
     private val db by lazy { AppDatabase.getDatabase(this) }
 
     private val editLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            // Extract the specific message (Record Added or Record Updated)
             val message = result.data?.getStringExtra("toast_message") ?: "Record Updated"
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
-            finish() // Close the view activity so the main list refreshes
+            finish()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // 1. Enable Edge to Edge
+        enableEdgeToEdge()
         setContentView(R.layout.activity_view_electricity)
 
-        // 2. Fix the Top Bar Overlap
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -76,13 +73,11 @@ class ViewElectricityActivity : AppCompatActivity() {
 
         val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
-        // Split Dates
         findViewById<TextView>(R.id.tvDetailStartDate).text = sdf.format(record!!.startDate)
         findViewById<TextView>(R.id.tvDetailEndDate).text = sdf.format(record!!.endDate)
 
         fun fmt(v: Double?): String = if (v == null) "-" else if (v % 1.0 == 0.0) v.toInt().toString() else v.toString()
 
-        // Units & Amount
         findViewById<TextView>(R.id.tvDetailStartUnits).text = fmt(record!!.startUnits)
         findViewById<TextView>(R.id.tvDetailEndUnits).text = fmt(record!!.endUnits)
         findViewById<TextView>(R.id.tvDetailTotalUnits).text = "${fmt(record!!.totalUnits)} Units"

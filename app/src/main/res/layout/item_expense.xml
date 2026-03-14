@@ -71,8 +71,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="RS 500"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="#E57373"/> <!-- Red for expense -->
+            android:textColor="#E57373"/>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -7,7 +7,8 @@
     <color name="teal_main">#179A9D</color>
     <color name="teal_dark">#006B6E</color> <!-- Darker shade for dark mode elements -->
     <color name="teal_light">#B2E0E1</color> <!-- Lighter shade for backgrounds/ripples -->
-
+    <color name="tile_add_bg">#CFD8DC</color>  <!-- Blue Grey 100 — darker than white, neutral -->
+    <color name="tag_teal_bg">#00796B</color>
     <color name="selected_item_bg">#B2E0E1</color>
 
     <!-- Text Colors -->

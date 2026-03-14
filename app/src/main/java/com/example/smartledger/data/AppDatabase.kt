@@ -9,8 +9,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [CalcHistory::class, Expense::class, Electricity::class, MilkRecord::class],
-    version = 6, // INCREMENTED TO 6
+    entities = [CalcHistory::class, Expense::class, Electricity::class, MilkRecord::class, CustomLedger::class, CustomEntry::class, CustomDailyRecord::class],
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -19,31 +19,42 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun electricityDao(): ElectricityDao
     abstract fun milkDao(): MilkDao
+    abstract fun customLedgerDao(): CustomLedgerDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
 
-        // MIGRATION 5 -> 6: Remove firebaseId columns
         // Note: SQLite technically supports DROP COLUMN in newer versions,
         // but creating a migration to explicitly ignore them is safer for Room integrity.
         // Assuming you have removed 'firebaseId' from your Entity classes,
         // we run SQL to clean the database structure.
-        private val MIGRATION_5_6 = object : Migration(5, 6) {
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Try to drop the columns. If running on older Android, this might fail,
-                // so we wrap in try-catch or use fallback.
-                // Since this is a clean break, recreating the tables is the most robust way
-                // but simpler allows 'DROP COLUMN' on Android API 21+ (which is standard now).
+                database.execSQL("""
+            CREATE TABLE IF NOT EXISTS custom_ledgers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                name TEXT NOT NULL, 
+                iconName TEXT NOT NULL, 
+                fields TEXT NOT NULL, 
+                hasPhotos INTEGER NOT NULL, 
+                createdAt INTEGER NOT NULL
+            )
+        """.trimIndent())
 
-                try {
-                    database.execSQL("ALTER TABLE expenses DROP COLUMN firebaseId")
-                    database.execSQL("ALTER TABLE electricity_records DROP COLUMN firebaseId")
-                    database.execSQL("ALTER TABLE milk_records DROP COLUMN firebaseId")
-                } catch (e: Exception) {
-                    // If DROP COLUMN is not supported (very old devices),
-                    // we usually just leave the column there unused, or recreate table.
-                    // For now, we assume standard modern Android behavior.
-                }
+                database.execSQL("""
+            CREATE TABLE IF NOT EXISTS custom_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                ledgerId INTEGER NOT NULL, 
+                date INTEGER NOT NULL, 
+                amount REAL, 
+                dataJson TEXT NOT NULL, 
+                imagePaths TEXT NOT NULL, 
+                isDeleted INTEGER NOT NULL, 
+                deletedAt INTEGER
+            )
+        """.trimIndent())
+
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_custom_entries_ledgerId ON custom_entries (ledgerId)")
             }
         }
 
@@ -54,8 +65,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "smart_ledger_db"
                 )
-                    .addMigrations(MIGRATION_5_6)
-                    .fallbackToDestructiveMigration() // If migration fails, it will reset DB (Safety net)
+                    .addMigrations(MIGRATION_6_7)
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

@@ -1,6 +1,6 @@
 package com.example.smartledger.activity
 
-import android.content.Context
+import android.app.NotificationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -28,7 +28,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
-import android.app.NotificationManager
 
 class ViewMilkActivity : AppCompatActivity() {
 
@@ -39,7 +38,7 @@ class ViewMilkActivity : AppCompatActivity() {
     private lateinit var tvPriceInfo: TextView
     private val db by lazy { AppDatabase.getDatabase(this) }
 
-    // Debounce Job (Waiting for user to stop typing)
+    // Debounce Job
     private var saveJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,7 +48,14 @@ class ViewMilkActivity : AppCompatActivity() {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+
+            v.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                maxOf(systemBars.bottom, imeInsets.bottom)
+            )
             insets
         }
 
@@ -68,17 +74,14 @@ class ViewMilkActivity : AppCompatActivity() {
         val btnDelete = findViewById<ImageView>(R.id.btnDeleteHeader)
         tvPriceInfo = findViewById(R.id.tvPriceInfo)
         btnInfo.setOnClickListener {
-            // Show the Price
             tvPriceInfo.text = "Current Rate: Rs ${record!!.pricePerLiter} / Liter"
             tvPriceInfo.visibility = View.VISIBLE
 
-            // Auto-hide after 3 seconds
             Handler(Looper.getMainLooper()).postDelayed({
                 tvPriceInfo.visibility = View.GONE
             }, 3000)
         }
 
-        // 2. Delete Button Click
         btnDelete.setOnClickListener {
             showDeleteDialog()
         }
@@ -86,13 +89,12 @@ class ViewMilkActivity : AppCompatActivity() {
         tvTotalLiters = findViewById(R.id.tvTotalLiters)
         tvTotalAmount = findViewById(R.id.tvTotalAmount)
 
-        updateSummaryUI() // Initial calculation
+        updateSummaryUI()
 
         val rv = findViewById<RecyclerView>(R.id.rvDailyEntries)
         rv.layoutManager = LinearLayoutManager(this)
 
         adapter = MilkDailyAdapter(record!!.dailyEntries, record!!.pricePerLiter) {
-            // This block runs every time the user types a number
             onRecordChanged()
         }
         rv.adapter = adapter
@@ -126,12 +128,11 @@ class ViewMilkActivity : AppCompatActivity() {
         btnConfirm.setOnClickListener {
             dialog.dismiss()
             lifecycleScope.launch {
-                // Delete logic in background
                 withContext(Dispatchers.IO) {
                     db.milkDao().softDelete(listOf(record!!.id), System.currentTimeMillis())
                 }
                 Toast.makeText(this@ViewMilkActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
-                finish() // Close screen
+                finish()
             }
         }
         dialog.show()
@@ -149,26 +150,21 @@ class ViewMilkActivity : AppCompatActivity() {
     }
 
     private fun onRecordChanged() {
-        // 1. Immediate UI Update (Totals)
         updateSummaryUI()
 
-        // 3. Cancel previous save job if user is still typing
         saveJob?.cancel()
 
-        // 4. Start new save job (Wait 1 second)
         saveJob = lifecycleScope.launch {
             delay(1000)
             var finalLiters = 0.0
             record!!.dailyEntries.forEach { finalLiters += it.liters }
             val finalAmount = finalLiters * record!!.pricePerLiter
 
-            // Create updated object
             val updatedRecord = record!!.copy(
                 totalLiters = finalLiters,
                 totalAmount = finalAmount
             )
 
-            // A. Save Local (Fast)
             withContext(Dispatchers.IO) {
                 db.milkDao().update(updatedRecord)
                 val today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)

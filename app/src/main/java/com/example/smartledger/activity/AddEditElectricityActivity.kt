@@ -45,7 +45,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
     private lateinit var btnSave: Button
     private lateinit var rvPhotos: RecyclerView
     private lateinit var btnAddPhoto: Button
-
     private var initialStartUnits = ""
     private var initialEndUnits = ""
     private var initialAmount = ""
@@ -53,7 +52,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
     private var initialStartDate: Long? = null
     private var initialEndDate: Long? = null
     private var initialImagePaths = mutableListOf<String>()
-
     private var startDate: Long? = null
     private var endDate: Long? = null
     private val selectedImagePaths = mutableListOf<String>()
@@ -88,6 +86,7 @@ class AddEditElectricityActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_add_edit_electricity)
         setupWindowInsets()
+        existingRecord = intent.getSerializableExtra("electricity_data") as? Electricity
 
         initViews()
         rvPhotos = findViewById(R.id.rvPhotos)
@@ -97,8 +96,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
             val savedPaths = savedInstanceState.getStringArrayList("selected_images")
             if (savedPaths != null) selectedImagePaths.addAll(savedPaths)
         }
-
-        existingRecord = intent.getSerializableExtra("electricity_data") as? Electricity
 
         setupPhotoLogic()
         populateData()
@@ -123,7 +120,10 @@ class AddEditElectricityActivity : AppCompatActivity() {
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(0, systemBars.top, 0, systemBars.bottom)
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val bottomPadding = if (imeInsets.bottom > 0) imeInsets.bottom else systemBars.bottom
+
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding)
             insets
         }
     }
@@ -155,7 +155,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 if (isUpdating) return
 
-                // Clear errors on any input
                 etStartUnits.error = null
                 etEndUnits.error = null
                 etTotalUnits.error = null
@@ -199,7 +198,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
             val sourceHash = source.hashCode()
 
             when {
-                // IF typing in END
                 etEndUnits.text?.hashCode() == sourceHash -> {
                     if (end != null) {
                         val newValue = formatValue(end - start)
@@ -207,12 +205,10 @@ class AddEditElectricityActivity : AppCompatActivity() {
                             etTotalUnits.setText(newValue)
                         }
                     } else {
-                        // Perfect App Logic: If End is cleared, clear Total
                         etTotalUnits.setText("")
                     }
                 }
 
-                // IF typing in TOTAL
                 etTotalUnits.text?.hashCode() == sourceHash -> {
                     if (total != null) {
                         val newValue = formatValue(start + total)
@@ -220,12 +216,10 @@ class AddEditElectricityActivity : AppCompatActivity() {
                             etEndUnits.setText(newValue)
                         }
                     } else {
-                        // Perfect App Logic: If Total is cleared, clear End
                         etEndUnits.setText("")
                     }
                 }
 
-                // IF typing in START
                 etStartUnits.text?.hashCode() == sourceHash -> {
                     if (end != null) {
                         val newValue = formatValue(end - start)
@@ -239,18 +233,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
             isUpdating = false
         }
     }
-
-    // Helper to keep the UI clean (removes .0 from whole numbers)
-    private fun formatValue(value: Double): String {
-        return if (value % 1.0 == 0.0) value.toInt().toString() else String.format("%.1f", value)
-    }
-
-    private fun updateDateText(view: TextInputEditText, date: Long) {
-        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        view.setText(sdf.format(Date(date)))
-        view.error = null
-    }
-
     private fun validateAndSave() {
         if (startDate == null) { etStartDate.error = "Required"; return }
         if (endDate == null) { etEndDate.error = "Required"; return }
@@ -312,10 +294,8 @@ class AddEditElectricityActivity : AppCompatActivity() {
 
         btnCancel.setOnClickListener { dialog.dismiss() }
 
-        // --- FIXED LOGIC HERE ---
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-
             // Launch coroutine to save to DB
             lifecycleScope.launch {
                 withContext(Dispatchers.IO) {
@@ -338,6 +318,14 @@ class AddEditElectricityActivity : AppCompatActivity() {
     }
 
     // --- HELPERS ---
+    private fun formatValue(value: Double): String {
+        return if (value % 1.0 == 0.0) value.toInt().toString() else String.format("%.1f", value)
+    }
+    private fun updateDateText(view: TextInputEditText, date: Long) {
+        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        view.setText(sdf.format(Date(date)))
+        view.error = null
+    }
     private fun showDatePicker(onDateSelected: (Long) -> Unit) {
         val picker = MaterialDatePicker.Builder.datePicker()
             .setTitleText("Select Date")
@@ -358,7 +346,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
         }
         picker.show(supportFragmentManager, "tag")
     }
-
     private fun showImageSourceDialog() {
         val options = arrayOf("Take Photo", "Choose from Gallery")
         androidx.appcompat.app.AlertDialog.Builder(this)
@@ -377,7 +364,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
             }
             .show()
     }
-
     private fun openCamera() {
         try {
             val tmpFile = File.createTempFile("img_", ".jpg", externalCacheDir)
@@ -388,7 +374,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
             Toast.makeText(this, "Error opening camera", Toast.LENGTH_SHORT).show()
         }
     }
-
     private fun processSelectedImage(uri: Uri) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -417,7 +402,6 @@ class AddEditElectricityActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun setupPhotoLogic() {
         thumbnailAdapter = ThumbnailAdapter(selectedImagePaths) { imagePath ->
             val position = selectedImagePaths.indexOf(imagePath)
@@ -431,12 +415,10 @@ class AddEditElectricityActivity : AppCompatActivity() {
         rvPhotos.adapter = thumbnailAdapter
         updatePhotoCount()
     }
-
     private fun updatePhotoCount() {
         btnAddPhoto.isEnabled = selectedImagePaths.size < 3
         btnAddPhoto.text = if(selectedImagePaths.size >= 3) "Limit Reached" else "Add"
     }
-
     private fun captureInitialState() {
         initialStartDate = startDate
         initialEndDate = endDate
@@ -446,10 +428,8 @@ class AddEditElectricityActivity : AppCompatActivity() {
         initialAmount = etAmount.text.toString()
         initialImagePaths = selectedImagePaths.toMutableList()
     }
-
     private fun populateData() {
         if (existingRecord != null) {
-            // --- LOGIC FOR EDITING (Stays the same as your current code) ---
             val it = existingRecord!!
             initialStartDate = it.startDate
             initialEndDate = it.endDate
@@ -474,10 +454,8 @@ class AddEditElectricityActivity : AppCompatActivity() {
             }
             thumbnailAdapter.notifyDataSetChanged()
         } else {
-            // --- SMART PRE-FILL FOR NEW RECORDS ---
             lifecycleScope.launch(Dispatchers.IO) {
                 val lastRecord = db.electricityDao().getLastActiveRecord()
-
                 withContext(Dispatchers.Main) {
                     lastRecord?.let { last ->
                         // 1. Pre-fill Start Units from the previous End Units
@@ -531,25 +509,24 @@ class AddEditElectricityActivity : AppCompatActivity() {
 
         val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
         val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<android.view.View>(R.id.containerDetails)
-        val btnCancel = dialogView.findViewById<android.view.View>(R.id.btnDialogCancel)
+        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
+        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
         val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
 
         tvTitle.text = "Discard Changes?"
         tvMessage.text = "You have unsaved changes. Are you sure you want to discard them and go back?"
-        containerDetails.visibility = View.GONE // Hide the details box for discard dialog
+        containerDetails.visibility = View.GONE
 
         btnConfirm.text = "Discard"
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-            finish() // Go back to the previous screen (ElectricityActivity or ViewElectricityActivity)
+            finish()
         }
 
         dialog.show()
     }
-
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {

@@ -25,29 +25,16 @@ class MilkDailyAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val entry = dailyEntries[position]
         holder.tvDay.text = "Day ${entry.day}"
-
-        // 1. CRITICAL FIX: Remove the previous listener BEFORE setting text
-        // This stops the scrolling bug where data replicates to other rows
         if (holder.currentWatcher != null) {
             holder.etLiters.removeTextChangedListener(holder.currentWatcher)
         }
-
-        // 2. SET DATA
-        // If 0.0, show empty (so we can control the hint). If value exists, show it.
         if (entry.liters == 0.0) {
             holder.etLiters.setText("")
         } else {
             val text = if (entry.liters % 1.0 == 0.0) entry.liters.toInt().toString() else entry.liters.toString()
             holder.etLiters.setText(text)
         }
-
-        // 3. PROFESSIONAL HINT LOGIC
-        // Reset hint to "0" initially
         holder.etLiters.hint = "0"
-
-        // Add Focus Listener:
-        // When clicked (Focus True) -> Hint disappears
-        // When left (Focus False) -> Hint reappears if empty
         holder.etLiters.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 holder.etLiters.hint = ""
@@ -56,17 +43,12 @@ class MilkDailyAdapter(
             }
         }
 
-        // 4. UPDATE PRICE
         val price = entry.liters * pricePerLiter
         holder.tvDayPrice.text = "Rs ${price.toInt()}"
-
-        // 5. ATTACH NEW LISTENER
         val newWatcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val input = s.toString()
                 val qty = if (input.isEmpty()) 0.0 else input.toDoubleOrNull() ?: 0.0
-
-                // Only update if value changed to prevent loops
                 if (entry.liters != qty) {
                     entry.liters = qty
                     val newPrice = qty * pricePerLiter
@@ -88,8 +70,6 @@ class MilkDailyAdapter(
         val tvDay: TextView = itemView.findViewById(R.id.tvDay)
         val etLiters: EditText = itemView.findViewById(R.id.etLiters)
         val tvDayPrice: TextView = itemView.findViewById(R.id.tvDayPrice)
-
-        // Holds reference to the watcher so we can remove it later
         var currentWatcher: TextWatcher? = null
     }
 }

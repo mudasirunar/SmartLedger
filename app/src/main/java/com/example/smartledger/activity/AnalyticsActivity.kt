@@ -1,6 +1,6 @@
 package com.example.smartledger.activity
 
-import AiHelper
+import com.example.smartledger.util.AiHelper
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -121,6 +121,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         setupMilkChartNavigation()
         setupExpenseNavigation()
         fixChartScrollConflict()
+        observeCustomLedgers()
         loadData()
 
     }
@@ -135,27 +136,20 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
 
-        // 1. Force the theme to refresh
         theme.applyStyle(R.style.Theme_SmartLedger, true)
 
-        // 2. Fetch colors using standard Attribute IDs
         val bgColor = getThemeColor(android.R.attr.colorBackground)
         val surfaceColor = getThemeColor(com.google.android.material.R.attr.colorSurfaceContainer)
         val onSurfaceColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
-
-        // SAFE RESOLUTION FOR PRIMARY COLOR
         val primaryColor = getThemeColor(androidx.appcompat.R.attr.colorPrimary)
 
-        // 3. Update Activity Background
         findViewById<View>(R.id.main_content).setBackgroundColor(bgColor)
 
-        // 4. Update the Card containers
         val cardIds = listOf(R.id.cardSpending, R.id.cardElectricity, R.id.cardMilk, R.id.cardExpenses)
         cardIds.forEach { id ->
             findViewById<com.google.android.material.card.MaterialCardView>(id)?.setCardBackgroundColor(surfaceColor)
         }
 
-        // 5. FIX THE YoY LABELS (The text you mentioned)
         val yoyLabelIds = listOf(
             R.id.tvPrevYearLabel, R.id.tvCurrYearLabel,
             R.id.tvMilkPrevYearLabel, R.id.tvMilkCurrYearLabel
@@ -164,7 +158,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             findViewById<TextView>(id)?.setTextColor(onSurfaceColor)
         }
 
-        // 6. Update Chart Interior Text
         val allCharts = listOf(pieChart, barChartUnits, barChartCost, barChartYoY,
             barChartMilkLitres, barChartMilkCost, barChartMilkYoY,
             barChartExpenseMonthly, pieChartExpenseCategory)
@@ -178,7 +171,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 chart.axisRight.textColor = onSurfaceColor
             }
 
-            // Fix the labels INSIDE the charts (Units, Cost, etc.)
             chart.data?.dataSets?.forEach { dataSet ->
                 dataSet.valueTextColor = onSurfaceColor
             }
@@ -199,12 +191,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         if (currentText.contains("\n")) {
             val parts = currentText.split("\n")
             val spannable = SpannableString(currentText)
-
-            // "Total" or "Total Spent" label (make it a bit subtle)
             spannable.setSpan(ForegroundColorSpan(Color.GRAY), 0, parts[0].length, 0)
             spannable.setSpan(RelativeSizeSpan(0.8f), 0, parts[0].length, 0)
-
-            // The Amount (make it bold and the primary theme color)
             val startOfAmount = parts[0].length + 1
             spannable.setSpan(ForegroundColorSpan(primaryColor), startOfAmount, currentText.length, 0)
             spannable.setSpan(StyleSpan(Typeface.BOLD), startOfAmount, currentText.length, 0)
@@ -261,14 +249,12 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         btnExpenseNext = findViewById(R.id.btnExpenseNext)
     }
 
-    // Get theme colors dynamically
     private fun getThemeColor(attr: Int): Int {
         val typedValue = android.util.TypedValue()
         theme.resolveAttribute(attr, typedValue, true)
         return typedValue.data
     }
 
-    // Apply theme to all charts
     private fun applyChartTheme(chart: com.github.mikephil.charting.charts.Chart<*>) {
         val textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
 
@@ -526,7 +512,16 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 if (hasMilkData) {
                     milkBtnAi.setOnClickListener {
                         val summary = AiHelper.summarizeMilk(historicalMilkList)
-                        startAiInsight("Milk", summary, historicalMilkList.size)
+                        val lastRecord = historicalMilkList.lastOrNull()
+                        val lastMonthName = lastRecord?.monthName ?: ""
+                        val lastYear = lastRecord?.year ?: 0
+                        val cal = Calendar.getInstance()
+                        cal.set(Calendar.MONTH, lastRecord?.monthIndex ?: 0)
+                        cal.set(Calendar.YEAR, lastYear)
+                        cal.add(Calendar.MONTH, 1)
+                        val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(cal.time)
+                        val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthName $lastYear. Predict for: $predictMonthName only.]"
+                        startAiInsight("Milk", summaryWithContext, historicalMilkList.size)
                     }
                 }
 
@@ -583,7 +578,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             gradientColors = getTrafficLightGradients(entriesCost)
         )
     }
-
     private fun setupMilkYoYChart(records: List<MilkRecord>) {
         if (records.isEmpty()) {
             barChartMilkYoY.setNoDataText("No chart data available")
@@ -636,13 +630,11 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         setPrev.valueTextSize = 9f
         setPrev.valueTextColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
         setPrev.setDrawValues(true)
-
         val setCurr = BarDataSet(entriesCurr, "Current")
         setCurr.color = Color.parseColor("#1976D2")
         setCurr.valueTextSize = 9f
         setCurr.valueTextColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
         setCurr.setDrawValues(true)
-
         val decimalFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 return if (value > 0) String.format(Locale.getDefault(), "%.1f", value) else ""
@@ -713,7 +705,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             calendar.add(Calendar.MONTH, i)
             val currYear = calendar.get(Calendar.YEAR)
             val currMonth = calendar.get(Calendar.MONTH)
-
             val currKey = currYear * 100 + currMonth
             val prevKey = (currYear - 1) * 100 + currMonth
             val valCurr = dataMap[currKey] ?: 0f
@@ -1031,7 +1022,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         return String.format(Locale.getDefault(), "%.0f", value)
     }
 
-    // AI Dialog with state preservation
     private fun startAiInsight(dataType: String, dataSummary: String, recordCount: Int) {
         val intent = Intent(this, AiInsightActivity::class.java).apply {
             putExtra("DATA_TYPE", dataType)
@@ -1079,44 +1069,59 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         drawerLayout.closeDrawer(GravityCompat.START)
+        val id = item.itemId
+
         Handler(Looper.getMainLooper()).postDelayed({
-            when (item.itemId) {
-                R.id.nav_dashboard -> {
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            lifecycleScope.launch {
+                val customLedgers = withContext(Dispatchers.IO) { db.customLedgerDao().getAllLedgersList() }
+                val clickedLedger = customLedgers.find { (it.id + 1000) == id }
+
+                if (clickedLedger != null) {
+                    val intent = Intent(this@AnalyticsActivity, GenericLedgerActivity::class.java)
+                    intent.putExtra("ledger_template", clickedLedger)
                     startActivity(intent)
                     finish()
-                }
-                R.id.nav_analytics -> {}
-                R.id.nav_electricity -> {
-                    val intent = Intent(this, ElectricityActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_milk -> {
-                    val intent = Intent(this, MilkActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_expenses -> {
-                    val intent = Intent(this, ExpenseActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    finish()
-                }
-                R.id.nav_trash -> {
-                    startActivity(Intent(this, TrashBinActivity::class.java))
-                    finish()
-                }
-                R.id.nav_calculator -> startActivity(Intent(this, CalculatorActivity::class.java))
-                R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    startActivity(intent)
-                    finish()
-                    Toast.makeText(this, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Static Navigation
+                    when (id) {
+                        R.id.nav_dashboard -> {
+                            val intent = Intent(this@AnalyticsActivity, MainActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_analytics -> { /* Already here */ }
+                        R.id.nav_electricity -> {
+                            val intent = Intent(this@AnalyticsActivity, ElectricityActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_milk -> {
+                            val intent = Intent(this@AnalyticsActivity, MilkActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_expenses -> {
+                            val intent = Intent(this@AnalyticsActivity, ExpenseActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                            startActivity(intent)
+                            finish()
+                        }
+                        R.id.nav_trash -> {
+                            startActivity(Intent(this@AnalyticsActivity, TrashBinActivity::class.java))
+                            finish()
+                        }
+                        R.id.nav_calculator -> startActivity(Intent(this@AnalyticsActivity, CalculatorActivity::class.java))
+                        R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
+                            val intent = Intent(this@AnalyticsActivity, MainActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            startActivity(intent)
+                            finish()
+                            Toast.makeText(this@AnalyticsActivity, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         }, 250)
@@ -1141,27 +1146,53 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     private fun setupHeader() {
         val navView = findViewById<NavigationView>(R.id.navigationView)
         val headerView = navView.getHeaderView(0)
-
-        // Use findViewById on the headerView, not the activity
         val tvName = headerView.findViewById<TextView>(R.id.headerName)
         val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
-
         val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
 
-        // 1. Load the data
         tvName.text = prefs.getString("user_name", "Enter your name")
         tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
 
-        // 2. The Safety Check: Only allow editing if we are in MainActivity
         if (this is MainActivity) {
             tvName.setOnClickListener {
-                // This call is now safe because 'this' is confirmed as MainActivity
                 this.showEditNameDialog(tvName)
             }
         } else {
-            // In other activities, remove the edit icon/arrow if you added one
             tvName.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             tvName.setOnClickListener(null)
+        }
+    }
+    private fun observeCustomLedgers() {
+        lifecycleScope.launch {
+            db.customLedgerDao().getAllLedgers().collect { ledgers ->
+                val navigationView = findViewById<NavigationView>(R.id.navigationView)
+                val menu = navigationView.menu
+                val staticIds = setOf(R.id.nav_dashboard, R.id.nav_electricity, R.id.nav_milk, R.id.nav_expenses)
+                val toRemove = mutableListOf<Int>()
+
+                for (i in 0 until menu.size()) {
+                    val item = menu.getItem(i)
+                    if (item.groupId == R.id.group_main && !staticIds.contains(item.itemId)) {
+                        toRemove.add(item.itemId)
+                    }
+                }
+                toRemove.forEach { menu.removeItem(it) }
+
+                ledgers.forEachIndexed { index, ledger ->
+                    val iconResId = resources.getIdentifier(ledger.iconName, "drawable", packageName)
+
+                    val menuItem = menu.add(
+                        R.id.group_main,
+                        ledger.id + 1000,
+                        10 + index,
+                        ledger.name
+                    )
+
+                    menuItem.setIcon(if (iconResId != 0) iconResId else R.drawable.ic_star)
+                    menuItem.setCheckable(true)
+                    menuItem.icon?.setTint(androidx.core.content.ContextCompat.getColor(this@AnalyticsActivity, R.color.teal_main))
+                }
+            }
         }
     }
 }

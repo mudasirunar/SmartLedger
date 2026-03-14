@@ -12,9 +12,7 @@ data class Expense(
     val amount: Double,
     val date: Long,
     val imagePaths: List<String> = emptyList(),
-
-    // Trash Bin Fields
     val isDeleted: Boolean = false,
-    val deletedAt: Long? = null, // Timestamp when it was deleted
+    val deletedAt: Long? = null,
 
 ) : Serializable

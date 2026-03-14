@@ -26,4 +26,26 @@ class Converters {
         val listType = object : TypeToken<List<DailyEntry>>() {}.type
         return Gson().fromJson(value, listType)
     }
+
+    @TypeConverter
+    fun fromCustomFieldList(value: List<CustomField>?): String {
+        return Gson().toJson(value)
+    }
+
+    @TypeConverter
+    fun toCustomFieldList(value: String): List<CustomField>? {
+        val listType = object : TypeToken<List<CustomField>>() {}.type
+        return Gson().fromJson(value, listType)
+    }
+
+    @TypeConverter
+    fun fromCustomDailyEntryList(list: List<CustomDailyEntry>): String {
+        return Gson().toJson(list)
+    }
+
+    @TypeConverter
+    fun toCustomDailyEntryList(value: String): List<CustomDailyEntry> {
+        val listType = object : TypeToken<List<CustomDailyEntry>>() {}.type
+        return Gson().fromJson(value, listType) ?: emptyList()
+    }
 }

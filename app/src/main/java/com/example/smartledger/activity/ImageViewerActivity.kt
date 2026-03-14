@@ -1,6 +1,5 @@
 package com.example.smartledger.activity
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,7 +11,6 @@ import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.example.smartledger.R
 import com.github.chrisbanes.photoview.PhotoView
-import java.io.File
 import kotlin.math.abs
 
 class ImageViewerActivity : AppCompatActivity() {
@@ -25,25 +23,19 @@ class ImageViewerActivity : AppCompatActivity() {
         viewPager.offscreenPageLimit = 1
         val btnClose = findViewById<ImageView>(R.id.btnClose)
 
-        // 1. Get Data
         val imagePaths = intent.getStringArrayListExtra("image_paths") ?: arrayListOf()
         val startPosition = intent.getIntExtra("position", 0)
 
-        // 2. Setup Adapter with Swipe-to-Close callback
         val adapter = FullScreenImageAdapter(imagePaths) {
-            // This code runs when a swipe down is detected
             finish()
         }
         viewPager.adapter = adapter
 
-        // 3. Set Start Position
         viewPager.setCurrentItem(startPosition, false)
 
-        // Close Button
         btnClose.setOnClickListener { finish() }
     }
 
-    // --- ADAPTER ---
     inner class FullScreenImageAdapter(
         private val paths: List<String>,
         private val onDismiss: () -> Unit
@@ -53,11 +45,10 @@ class ImageViewerActivity : AppCompatActivity() {
             val photoView: PhotoView = itemView.findViewById(R.id.photo_view)
 
             fun bind(path: String) {
-                // OPTIMIZED: Use Glide for full-screen loading
                 Glide.with(this@ImageViewerActivity)
                     .load(path)
-                    .fitCenter() // Ensures the whole image fits the screen
-                    .thumbnail(0.1f) // Loads a tiny, blurry version first so swipe feels instant
+                    .fitCenter()
+                    .thumbnail(0.1f)
                     .into(photoView)
 
                 // SWIPE DOWN LOGIC (Keep your existing fling logic)

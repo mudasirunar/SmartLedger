@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <group android:checkableBehavior="single">
+    <group android:id="@+id/group_main" android:checkableBehavior="single">
         <item
             android:id="@+id/nav_dashboard"
             android:icon="@drawable/ic_dashboard"
+            android:orderInCategory="1"
             android:title="Dashboard" />
-
         <item
             android:id="@+id/nav_electricity"
             android:icon="@drawable/ic_bolt"
+            android:orderInCategory="2"
             android:title="Electricity" />
-
         <item
             android:id="@+id/nav_milk"
             android:icon="@drawable/ic_water_drop"
+            android:orderInCategory="3"
             android:title="Milk Records" />
-
         <item
             android:id="@+id/nav_expenses"
             android:icon="@drawable/ic_attach_money"
+            android:orderInCategory="4"
             android:title="Expenses" />
-
-        <item
-            android:id="@+id/nav_analytics"
-            android:icon="@drawable/ic_pie_chart"
-            android:title="Analytics" />
     </group>
 
-    <item android:title="Tools">
+    <item android:title="Tools" android:orderInCategory="900">
         <menu>
-            <group android:checkableBehavior="single">
+            <group android:id="@+id/group_tools_items" android:checkableBehavior="single">
+                <item
+                    android:id="@+id/nav_analytics"
+                    android:icon="@drawable/ic_pie_chart"
+                    android:title="Analytics" />
                 <item
                     android:id="@+id/nav_calculator"
                     android:icon="@drawable/ic_calculate"
@@ -39,12 +39,10 @@
                     android:id="@+id/nav_trash"
                     android:icon="@drawable/ic_delete"
                     android:title="Trash Bin" />
-
                 <item
                     android:id="@+id/nav_backup"
                     android:icon="@drawable/ic_save"
                     android:title="Backup Data" />
-
                 <item
                     android:id="@+id/nav_restore"
                     android:icon="@drawable/ic_refresh"
@@ -52,7 +50,7 @@
                 <item
                     android:id="@+id/nav_wipe_data"
                     android:icon="@drawable/ic_delete"
-                    android:title="Wipe / Reset App" />
+                    android:title="Reset App" />
             </group>
         </menu>
     </item>

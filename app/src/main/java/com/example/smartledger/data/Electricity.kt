@@ -11,12 +11,10 @@ data class Electricity(
     val endDate: Long,
     val startUnits: Double?,
     val endUnits: Double?,
-    val totalUnits: Double?, // Calculated: End - Start
+    val totalUnits: Double?,
     val amount: Double?,
     val description: String,
     val imagePaths: List<String> = emptyList(),
-
-    // Trash Bin Fields
     val isDeleted: Boolean = false,
     val deletedAt: Long? = null,
 

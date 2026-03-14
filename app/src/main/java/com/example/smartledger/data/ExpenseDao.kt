@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExpenseDao {
-    // --- UPDATED NORMAL QUERIES (Only show isDeleted = 0) ---
+    // --- UPDATED NORMAL QUERIES ---
     @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY date DESC")
     fun getAllExpensesByDateDesc(): Flow<List<Expense>>
 
@@ -18,7 +18,6 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY amount ASC")
     fun getAllExpensesByAmountAsc(): Flow<List<Expense>>
 
-    // --- TRASH BIN QUERIES ---
 
     // 1. Get Trash Items (Sorted by Deleted Date DESC - Last deleted on top)
     @Query("SELECT * FROM expenses WHERE isDeleted = 1 ORDER BY deletedAt DESC")
