@@ -23,8 +23,6 @@ import com.example.smartledger.data.MilkRecord
 import com.example.smartledger.util.MilkNotificationConstants
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -37,9 +35,6 @@ class ViewMilkActivity : AppCompatActivity() {
     private lateinit var tvTotalAmount: TextView
     private lateinit var tvPriceInfo: TextView
     private val db by lazy { AppDatabase.getDatabase(this) }
-
-    // Debounce Job
-    private var saveJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -152,19 +147,16 @@ class ViewMilkActivity : AppCompatActivity() {
     private fun onRecordChanged() {
         updateSummaryUI()
 
-        saveJob?.cancel()
+        var finalLiters = 0.0
+        record!!.dailyEntries.forEach { finalLiters += it.liters }
+        val finalAmount = finalLiters * record!!.pricePerLiter
 
-        saveJob = lifecycleScope.launch {
-            delay(1000)
-            var finalLiters = 0.0
-            record!!.dailyEntries.forEach { finalLiters += it.liters }
-            val finalAmount = finalLiters * record!!.pricePerLiter
+        val updatedRecord = record!!.copy(
+            totalLiters = finalLiters,
+            totalAmount = finalAmount
+        )
 
-            val updatedRecord = record!!.copy(
-                totalLiters = finalLiters,
-                totalAmount = finalAmount
-            )
-
+        lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 db.milkDao().update(updatedRecord)
                 val today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)

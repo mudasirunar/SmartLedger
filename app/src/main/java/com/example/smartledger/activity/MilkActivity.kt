@@ -158,8 +158,14 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val lastRecord = db.milkDao().getAllRaw().firstOrNull() // Get most recent
-            val lastPrice = lastRecord?.pricePerLiter?.toInt()?.toString() ?: "220"
+            val records = db.milkDao().getAllRaw().filter { !it.isDeleted }
+            val lastPrice = if (records.isEmpty()) {
+                ""
+            } else {
+                val lastRecord = records.maxByOrNull { it.year * 100 + it.monthIndex }
+                val price = lastRecord?.pricePerLiter ?: 0.0
+                if (price == price.toLong().toDouble()) price.toLong().toString() else price.toString()
+            }
 
             withContext(Dispatchers.Main) {
                 etPrice.setText(lastPrice)
@@ -215,14 +221,15 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             )
 
             lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
+                val insertedId = withContext(Dispatchers.IO) {
                     db.milkDao().insert(record)
                 }
+                val recordWithId = record.copy(id = insertedId.toInt())
                 Toast.makeText(this@MilkActivity, "Month Added", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
 
                 val intent = Intent(this@MilkActivity, ViewMilkActivity::class.java)
-                intent.putExtra("milk_data", record)
+                intent.putExtra("milk_data", recordWithId)
                 startActivity(intent)
             }
         }

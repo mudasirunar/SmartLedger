@@ -30,7 +30,7 @@ interface MilkDao {
 
     // Actions
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(record: MilkRecord)
+    suspend fun insert(record: MilkRecord): Long
 
     @Update
     suspend fun update(record: MilkRecord)
