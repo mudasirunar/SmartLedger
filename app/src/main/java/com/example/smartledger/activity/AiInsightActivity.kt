@@ -328,6 +328,13 @@ class AiInsightActivity : AppCompatActivity() {
     }
 
     private fun updatePredictButtonState() {
+        if (dataType == "General Expenses") {
+            btnPredict.visibility = View.GONE
+            return
+        } else {
+            btnPredict.visibility = View.VISIBLE
+        }
+
         if (recordCount >= 6) {
             btnPredict.isEnabled = true
             btnPredict.alpha = 1.0f
