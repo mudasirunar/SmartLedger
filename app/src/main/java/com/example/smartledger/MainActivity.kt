@@ -150,57 +150,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setupHeader() {
         val navView = findViewById<NavigationView>(R.id.navigationView)
         val headerView = navView.getHeaderView(0)
-        val tvName = headerView.findViewById<TextView>(R.id.headerName)
         val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
-
         val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
-
-        tvName.text = prefs.getString("user_name", "Enter your name")
         tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
-
-        if (this is MainActivity) {
-            tvName.setOnClickListener {
-                showEditNameDialog(tvName)
-            }
-        }
-    }
-
-    fun showEditNameDialog(nameTextView: TextView) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_name, null)
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val etName = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etNameInput)
-        val btnCancel = dialogView.findViewById<TextView>(R.id.btnDialogCancel)
-        val btnSave = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
-
-        val current = nameTextView.text.toString()
-        if (current != "Enter your name") etName.setText(current)
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnSave.setOnClickListener {
-            val newName = etName.text.toString().trim()
-            if (newName.isNotEmpty()) {
-                val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
-                val isFirstTime = prefs.getString("user_name", null) == null
-                prefs.edit().putString("user_name", newName).apply()
-                setupHeader()
-                val toastMsg = if (isFirstTime) "Username Added" else "Username Updated"
-                Toast.makeText(this@MainActivity, toastMsg, Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            } else {
-                etName.error = "Please enter a name"
-            }
-        }
-
-        dialog.show()
-
-        etName.requestFocus()
-        Handler(Looper.getMainLooper()).postDelayed({
-            val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-            imm.showSoftInput(etName, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-        }, 200)
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
