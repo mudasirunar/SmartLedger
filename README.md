@@ -65,44 +65,44 @@ The application follows a **modular layered architecture inspired by Clean Archi
 Below are key screens from the SmartLedger app showing core functionality, AI insights, and user workflows.
 
 ### 🏠 Dashboard
-![Dashboard](app/screenshots/dashboard.jpg)
+<img src="app/screenshots/dashboard.jpg" width="250" alt="Dashboard">
 > Main home screen of the app showing all active ledgers, current date, and quick navigation options.
 
 ### 🧠 AI Insights & Predictions
-![AI Insights](app/screenshots/ai_insigth_and_prediction.jpg)
+<img src="app/screenshots/ai_insigth_and_prediction.jpg" width="250" alt="AI Insights">
 > Displays AI-generated financial insights and predictions, helping users understand spending patterns and future estimates based on historical data.
 
 ### 📊 Analytics Dashboard
-![Analytics](app/screenshots/analytics_screen.jpg)
+<img src="app/screenshots/analytics_screen.jpg" width="250" alt="Analytics">
 > Visual representation of expenses and income, offering interactive graph-based breakdowns for better financial tracking.
 
 ### 🧾 Create New Ledger (Step 1)
-![Step 1](app/screenshots/create_new_ledger_step1.jpg)
+<img src="app/screenshots/create_new_ledger_step1.jpg" width="250" alt="Step 1">
 > Initial setup screen for creating a new custom ledger, allowing the user to select appropriate names and icons.
 
 ### 🧾 Create New Ledger (Step 2)
-![Step 2](app/screenshots/create_new_ledger_step2.jpg)
+<img src="app/screenshots/create_new_ledger_step2.jpg" width="250" alt="Step 2">
 > Adds detailed configurations for ledger categories, preparing the structure for precise expense tracking (e.g., setting photo limits and date types).
 
 ### 🧾 Create New Ledger (Step 3)
-![Step 3](app/screenshots/create_new_ledger_step3.jpg)
+<img src="app/screenshots/create_new_ledger_step3.jpg" width="250" alt="Step 3">
 > Final step where users can define custom dynamic fields (like amounts or quantities) before ledger creation.
 
 
 ### 📝 Daily Log Management
-![Daily Log](app/screenshots/manage_dailly_log_screen.jpg)
+<img src="app/screenshots/manage_dailly_log_screen.jpg" width="250" alt="Daily Log">
 > Used to manage daily financial entries, supporting rapid addition, editing, and organization of logs.
 
 ### ⚡ Electricity Bill View
-![Electricity](app/screenshots/view_electricity_screen.jpg)
+<img src="app/screenshots/view_electricity_screen.jpg" width="250" alt="Electricity">
 > Dedicated view for tracking electricity expenses, helping users analyze utility consumption and pricing separately.
 
 ### 💰 Expense View Screen
-![Expense View](app/screenshots/view_expense_screen.jpg)
+<img src="app/screenshots/view_expense_screen.jpg" width="250" alt="Expense View">
 > Displays a detailed breakdown of an individual expense, including descriptions and attached receipt photos.
 
 ### 🔄 Restore Confirmation Dialog
-![Restore Dialog](app/screenshots/restore_done_dialog.jpg)
+<img src="app/screenshots/restore_done_dialog.jpg" width="300" alt="Restore Dialog">
 > Custom dialog shown after restoring data. Highlights the smart restore logic that safely ignores duplicate entries to maintain data integrity.
 ---
 
