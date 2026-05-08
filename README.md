@@ -112,7 +112,7 @@ Follow these steps to run SmartLedger locally:
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/yourusername/SmartLedger.git
+   git clone https://github.com/mudasirunar/SmartLedger.git
    ```
 2. **Open in Android Studio:**
    Launch Android Studio and select `Open an existing project`, then navigate to the cloned directory.
