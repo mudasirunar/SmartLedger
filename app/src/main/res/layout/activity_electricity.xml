@@ -24,7 +24,7 @@
                 android:layout_height="?attr/actionBarSize"
                 android:background="@color/teal_main"
                 app:navigationIcon="@drawable/ic_arrow_back"
-                app:title="Electricity Records"
+                app:title="Electricity"
                 app:titleTextColor="@color/white"
                 app:menu="@menu/expense_menu"
                 app:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar"

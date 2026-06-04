@@ -540,7 +540,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val summaryBuilder = StringBuilder()
 
         if (res.elecAdded > 0) summaryBuilder.append("• Electricity: ${res.elecAdded} Records\n")
-        if (res.milkAdded > 0) summaryBuilder.append("• Milk Records: ${res.milkAdded} Records\n")
+        if (res.milkAdded > 0) summaryBuilder.append("• Milk: ${res.milkAdded} Records\n")
         if (res.expenseAdded > 0) summaryBuilder.append("• Expenses: ${res.expenseAdded} Records\n")
 
         res.customCounts.forEach { (name, count) ->
@@ -616,7 +616,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val tiles = mutableListOf<DashboardTile>()
 
                 tiles.add(DashboardTile(1, "Electricity", R.drawable.ic_bolt, null))
-                tiles.add(DashboardTile(2, "Milk Records", R.drawable.ic_water_drop, null))
+                tiles.add(DashboardTile(2, "Milk", R.drawable.ic_water_drop, null))
                 tiles.add(DashboardTile(3, "Expenses", R.drawable.ic_attach_money, null))
                 customLedgers.forEach { ledger ->
                     tiles.add(DashboardTile(ledger.id + 100, ledger.name, null, ledger.iconName, true, false, ledger))

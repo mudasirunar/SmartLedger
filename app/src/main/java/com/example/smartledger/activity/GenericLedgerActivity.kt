@@ -390,28 +390,28 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                             finish()
                         }
                         R.id.nav_electricity -> {
-                            val intent = Intent(this@GenericLedgerActivity, ElectricityActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@GenericLedgerActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@GenericLedgerActivity, ElectricityActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_milk -> {
-                            val intent = Intent(this@GenericLedgerActivity, MilkActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@GenericLedgerActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@GenericLedgerActivity, MilkActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_expenses -> {
-                            val intent = Intent(this@GenericLedgerActivity, ExpenseActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@GenericLedgerActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@GenericLedgerActivity, ExpenseActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_analytics -> {
-                            val intent = Intent(this@GenericLedgerActivity, AnalyticsActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@GenericLedgerActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@GenericLedgerActivity, AnalyticsActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_trash -> {
                             val intent = Intent(this@GenericLedgerActivity, TrashBinActivity::class.java)

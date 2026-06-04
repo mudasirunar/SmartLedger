@@ -24,7 +24,7 @@
                 android:layout_height="?attr/actionBarSize"
                 android:background="@color/teal_main"
                 app:navigationIcon="@drawable/ic_arrow_back"
-                app:title="Milk Records"
+                app:title="Milk"
                 app:titleTextColor="@color/white"
                 app:menu="@menu/milk_menu"
                 app:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar"
