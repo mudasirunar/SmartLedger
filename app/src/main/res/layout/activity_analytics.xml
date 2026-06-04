@@ -78,15 +78,28 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="8dp">
-                            <TextView
-                                android:id="@+id/tvElecTitle"
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Electricity: Units"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/teal_main"
-                                android:layout_centerVertical="true"/>
+                                android:orientation="vertical"
+                                android:layout_centerVertical="true">
+                                <TextView
+                                    android:id="@+id/tvElecTitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Electricity: Units"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/teal_main"/>
+                                <TextView
+                                    android:id="@+id/tvElecSubtitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Total: 0 Units"
+                                    android:textSize="14sp"
+                                    android:textColor="@color/text_secondary"
+                                    android:visibility="visible"/>
+                            </LinearLayout>
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
@@ -204,15 +217,28 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="8dp">
-                            <TextView
-                                android:id="@+id/tvMilkTitle"
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Milk: Litres"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/teal_main"
-                                android:layout_centerVertical="true"/>
+                                android:orientation="vertical"
+                                android:layout_centerVertical="true">
+                                <TextView
+                                    android:id="@+id/tvMilkTitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Milk: Litres"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/teal_main"/>
+                                <TextView
+                                    android:id="@+id/tvMilkSubtitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Total: 0 Litres"
+                                    android:textSize="14sp"
+                                    android:textColor="@color/text_secondary"
+                                    android:visibility="visible"/>
+                            </LinearLayout>
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
@@ -330,15 +356,28 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="8dp">
-                            <TextView
-                                android:id="@+id/tvExpenseTitle"
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Expenses: Monthly"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/teal_main"
-                                android:layout_centerVertical="true"/>
+                                android:orientation="vertical"
+                                android:layout_centerVertical="true">
+                                <TextView
+                                    android:id="@+id/tvExpenseTitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Expenses: Monthly"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/teal_main"/>
+                                <TextView
+                                    android:id="@+id/tvExpenseSubtitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Total: 0 PKR"
+                                    android:textSize="14sp"
+                                    android:textColor="@color/text_secondary"
+                                    android:visibility="visible"/>
+                            </LinearLayout>
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"

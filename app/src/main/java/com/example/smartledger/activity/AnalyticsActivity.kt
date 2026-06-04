@@ -76,6 +76,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     // UI Containers - Electricity
     private lateinit var layoutYoY: LinearLayout
     private lateinit var tvElecTitle: TextView
+    private lateinit var tvElecSubtitle: TextView
     private lateinit var btnElecPrev: ImageButton
     private lateinit var btnElecNext: ImageButton
     private lateinit var tvPrevYearLabel: TextView
@@ -84,6 +85,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     // UI Containers - Milk
     private lateinit var layoutMilkYoY: LinearLayout
     private lateinit var tvMilkTitle: TextView
+    private lateinit var tvMilkSubtitle: TextView
     private lateinit var btnMilkPrev: ImageButton
     private lateinit var btnMilkNext: ImageButton
     private lateinit var tvMilkPrevYearLabel: TextView
@@ -91,6 +93,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
     // UI Containers - Expenses
     private lateinit var tvExpenseTitle: TextView
+    private lateinit var tvExpenseSubtitle: TextView
     private lateinit var btnExpensePrev: ImageButton
     private lateinit var btnExpenseNext: ImageButton
     private lateinit var layoutPieContainer: LinearLayout
@@ -100,6 +103,17 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     private var currentElecChartIndex = 0
     private var currentMilkChartIndex = 0
     private var currentExpenseChartIndex = 0
+
+    // Data Totals
+    private var totalElecUnits = 0.0
+    private var totalElecCost = 0.0
+    private var last12mElecUnits = 0.0
+    private var last12mElecCost = 0.0
+    private var totalMilkLiters = 0.0
+    private var totalMilkCost = 0.0
+    private var last12mMilkLiters = 0.0
+    private var last12mMilkCost = 0.0
+    private var totalExpenseCost = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -223,6 +237,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         barChartYoY = findViewById(R.id.barChartYoY)
         layoutYoY = findViewById(R.id.layoutElectricityYoY)
         tvElecTitle = findViewById(R.id.tvElecTitle)
+        tvElecSubtitle = findViewById(R.id.tvElecSubtitle)
         btnElecPrev = findViewById(R.id.btnElecPrev)
         btnElecNext = findViewById(R.id.btnElecNext)
         tvPrevYearLabel = findViewById(R.id.tvPrevYearLabel)
@@ -234,6 +249,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         barChartMilkYoY = findViewById(R.id.barChartMilkYoY)
         layoutMilkYoY = findViewById(R.id.layoutMilkYoY)
         tvMilkTitle = findViewById(R.id.tvMilkTitle)
+        tvMilkSubtitle = findViewById(R.id.tvMilkSubtitle)
         btnMilkPrev = findViewById(R.id.btnMilkPrev)
         btnMilkNext = findViewById(R.id.btnMilkNext)
         tvMilkPrevYearLabel = findViewById(R.id.tvMilkPrevYearLabel)
@@ -245,6 +261,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         layoutPieContainer = findViewById(R.id.layoutPieContainer)
         layoutExpenseLegend = findViewById(R.id.layoutExpenseLegend)
         tvExpenseTitle = findViewById(R.id.tvExpenseTitle)
+        tvExpenseSubtitle = findViewById(R.id.tvExpenseSubtitle)
         btnExpensePrev = findViewById(R.id.btnExpensePrev)
         btnExpenseNext = findViewById(R.id.btnExpenseNext)
     }
@@ -278,104 +295,131 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         chart.invalidate()
     }
 
-    // CAROUSEL LOGIC: ELECTRICITY
-    private fun setupChartNavigation() {
-        val updateChartVisibility = {
-            barChartUnits.visibility = View.GONE
-            barChartCost.visibility = View.GONE
-            layoutYoY.visibility = View.GONE
+    private fun formatValue(value: Double): String {
+        return String.format(Locale.getDefault(), "%,.1f", value)
+    }
 
-            when (currentElecChartIndex) {
-                0 -> {
-                    barChartUnits.visibility = View.VISIBLE
-                    tvElecTitle.text = "Electricity: Units"
-                    barChartUnits.animateY(800)
-                }
-                1 -> {
-                    barChartCost.visibility = View.VISIBLE
-                    tvElecTitle.text = "Electricity: Cost"
-                    barChartCost.animateY(800)
-                }
-                2 -> {
-                    layoutYoY.visibility = View.VISIBLE
-                    tvElecTitle.text = "Electricity: Comparison"
-                    barChartYoY.animateY(800)
-                }
+    private fun formatCost(value: Double): String {
+        return String.format(Locale.getDefault(), "%,.0f PKR", value)
+    }
+
+    // CAROUSEL LOGIC: ELECTRICITY
+    private fun updateElecChartVisibility(animate: Boolean = true) {
+        barChartUnits.visibility = View.GONE
+        barChartCost.visibility = View.GONE
+        layoutYoY.visibility = View.GONE
+
+        val duration = 800
+
+        when (currentElecChartIndex) {
+            0 -> {
+                barChartUnits.visibility = View.VISIBLE
+                tvElecTitle.text = "Electricity: Units"
+                tvElecSubtitle.text = "Total: ${formatValue(totalElecUnits)} Units"
+                if (animate) barChartUnits.animateY(duration)
+            }
+            1 -> {
+                barChartCost.visibility = View.VISIBLE
+                tvElecTitle.text = "Electricity: Cost"
+                tvElecSubtitle.text = "Total: ${formatCost(totalElecCost)}"
+                if (animate) barChartCost.animateY(duration)
+            }
+            2 -> {
+                layoutYoY.visibility = View.VISIBLE
+                tvElecTitle.text = "Electricity: Comparison"
+                tvElecSubtitle.text = "Last 12m: ${formatValue(last12mElecUnits)} Units, ${formatCost(last12mElecCost)}"
+                if (animate) barChartYoY.animateY(duration)
             }
         }
+    }
 
+    private fun setupChartNavigation() {
         btnElecNext.setOnClickListener {
             currentElecChartIndex = (currentElecChartIndex + 1) % 3
-            updateChartVisibility()
+            updateElecChartVisibility(true)
         }
 
         btnElecPrev.setOnClickListener {
             currentElecChartIndex = if (currentElecChartIndex - 1 < 0) 2 else currentElecChartIndex - 1
-            updateChartVisibility()
+            updateElecChartVisibility(true)
         }
+
+        updateElecChartVisibility(false)
     }
 
     // CAROUSEL LOGIC: MILK
-    private fun setupMilkChartNavigation() {
-        val updateChartVisibility = {
-            barChartMilkLitres.visibility = View.GONE
-            barChartMilkCost.visibility = View.GONE
-            layoutMilkYoY.visibility = View.GONE
+    private fun updateMilkChartVisibility(animate: Boolean = true) {
+        barChartMilkLitres.visibility = View.GONE
+        barChartMilkCost.visibility = View.GONE
+        layoutMilkYoY.visibility = View.GONE
 
-            when (currentMilkChartIndex) {
-                0 -> {
-                    barChartMilkLitres.visibility = View.VISIBLE
-                    tvMilkTitle.text = "Milk: Litres"
-                    barChartMilkLitres.animateY(800)
-                }
-                1 -> {
-                    barChartMilkCost.visibility = View.VISIBLE
-                    tvMilkTitle.text = "Milk: Cost"
-                    barChartMilkCost.animateY(800)
-                }
-                2 -> {
-                    layoutMilkYoY.visibility = View.VISIBLE
-                    tvMilkTitle.text = "Milk: Comparison"
-                    barChartMilkYoY.animateY(800)
-                }
+        val duration = 800
+
+        when (currentMilkChartIndex) {
+            0 -> {
+                barChartMilkLitres.visibility = View.VISIBLE
+                tvMilkTitle.text = "Milk: Litres"
+                tvMilkSubtitle.text = "Total: ${formatValue(totalMilkLiters)} Litres"
+                if (animate) barChartMilkLitres.animateY(duration)
+            }
+            1 -> {
+                barChartMilkCost.visibility = View.VISIBLE
+                tvMilkTitle.text = "Milk: Cost"
+                tvMilkSubtitle.text = "Total: ${formatCost(totalMilkCost)}"
+                if (animate) barChartMilkCost.animateY(duration)
+            }
+            2 -> {
+                layoutMilkYoY.visibility = View.VISIBLE
+                tvMilkTitle.text = "Milk: Comparison"
+                tvMilkSubtitle.text = "Last 12m: ${formatValue(last12mMilkLiters)} Litres, ${formatCost(last12mMilkCost)}"
+                if (animate) barChartMilkYoY.animateY(duration)
             }
         }
+    }
 
+    private fun setupMilkChartNavigation() {
         btnMilkNext.setOnClickListener {
             currentMilkChartIndex = (currentMilkChartIndex + 1) % 3
-            updateChartVisibility()
+            updateMilkChartVisibility(true)
         }
 
         btnMilkPrev.setOnClickListener {
             currentMilkChartIndex = if (currentMilkChartIndex - 1 < 0) 2 else currentMilkChartIndex - 1
-            updateChartVisibility()
+            updateMilkChartVisibility(true)
         }
+
+        updateMilkChartVisibility(false)
     }
 
     // CAROUSEL LOGIC: EXPENSES
-    private fun setupExpenseNavigation() {
-        val updateVisibility = {
-            barChartExpenseMonthly.visibility = View.GONE
-            layoutPieContainer.visibility = View.GONE
+    private fun updateExpenseVisibility(animate: Boolean = true) {
+        barChartExpenseMonthly.visibility = View.GONE
+        layoutPieContainer.visibility = View.GONE
 
-            if (currentExpenseChartIndex == 0) {
-                barChartExpenseMonthly.visibility = View.VISIBLE
-                tvExpenseTitle.text = "Expenses: Monthly"
-                barChartExpenseMonthly.animateY(800)
-            } else {
-                layoutPieContainer.visibility = View.VISIBLE
-                tvExpenseTitle.text = "Expenses: By Category"
-                pieChartExpenseCategory.animateY(800)
-            }
+        tvExpenseSubtitle.text = "Total: ${formatCost(totalExpenseCost)}"
+        val duration = 800
+
+        if (currentExpenseChartIndex == 0) {
+            barChartExpenseMonthly.visibility = View.VISIBLE
+            tvExpenseTitle.text = "Expenses: Monthly"
+            if (animate) barChartExpenseMonthly.animateY(duration)
+        } else {
+            layoutPieContainer.visibility = View.VISIBLE
+            tvExpenseTitle.text = "Expenses: By Category"
+            if (animate) pieChartExpenseCategory.animateY(duration)
         }
+    }
 
+    private fun setupExpenseNavigation() {
         val toggle = View.OnClickListener {
             currentExpenseChartIndex = if (currentExpenseChartIndex == 0) 1 else 0
-            updateVisibility()
+            updateExpenseVisibility(true)
         }
 
         btnExpenseNext.setOnClickListener(toggle)
         btnExpensePrev.setOnClickListener(toggle)
+
+        updateExpenseVisibility(false)
     }
 
     // SCROLL FIXES
@@ -463,30 +507,64 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             val milkRecords = db.milkDao().getAllRaw()
             val electricity = db.electricityDao().getAllRaw()
 
-            val totalExpense = expenses.filter { !it.isDeleted }.sumOf { it.amount }
-            val totalMilkCost = milkRecords.filter { !it.isDeleted }.sumOf { it.totalAmount }
-            val totalElec = electricity.filter { !it.isDeleted }.sumOf { it.amount ?: 0.0 }
-            val grandTotal = totalExpense + totalMilkCost + totalElec
+            totalExpenseCost = expenses.filter { !it.isDeleted }.sumOf { it.amount }
+            totalMilkCost = milkRecords.filter { !it.isDeleted }.sumOf { it.totalAmount }
+            totalElecCost = electricity.filter { !it.isDeleted }.sumOf { it.amount ?: 0.0 }
+            val grandTotal = totalExpenseCost + totalMilkCost + totalElecCost
 
-            val calendar = Calendar.getInstance()
-            val currentMonthIdx = calendar.get(Calendar.MONTH)
-            val currentYear = calendar.get(Calendar.YEAR)
+            totalElecUnits = electricity.filter { !it.isDeleted }.sumOf { it.totalUnits ?: 0.0 }
+            totalMilkLiters = milkRecords.filter { !it.isDeleted }.sumOf { it.totalLiters }
 
+            // Last 12 Months Calculations
             val elecList = electricity.filter { !it.isDeleted }.sortedBy { it.endDate }
-            val expenseList = expenses.filter { !it.isDeleted }.sortedBy { it.date }
+            val latestElecTime = elecList.lastOrNull()?.endDate ?: 0L
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = latestElecTime
+            cal.add(Calendar.MONTH, -11)
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            val startTimeElec = cal.timeInMillis
+            
+            val last12mElecList = elecList.filter { it.endDate >= startTimeElec }
+            last12mElecUnits = last12mElecList.sumOf { it.totalUnits ?: 0.0 }
+            last12mElecCost = last12mElecList.sumOf { it.amount ?: 0.0 }
+
             val milkList = milkRecords.filter { !it.isDeleted }
                 .sortedWith(compareBy({ it.year }, { it.monthIndex }))
+            val latestMilk = milkList.lastOrNull()
+            if (latestMilk != null) {
+                val latestMonthValue = latestMilk.year * 12 + latestMilk.monthIndex
+                val last12mMilkList = milkList.filter {
+                    (it.year * 12 + it.monthIndex) > (latestMonthValue - 12)
+                }
+                last12mMilkLiters = last12mMilkList.sumOf { it.totalLiters }
+                last12mMilkCost = last12mMilkList.sumOf { it.totalAmount }
+            } else {
+                last12mMilkLiters = 0.0
+                last12mMilkCost = 0.0
+            }
+
+            val currentMonthIdx = cal.get(Calendar.MONTH)
+            val currentYear = cal.get(Calendar.YEAR)
+
+            val expenseList = expenses.filter { !it.isDeleted }.sortedBy { it.date }
             val historicalMilkList = milkList.filter {
                 !(it.monthIndex == currentMonthIdx && it.year == currentYear)
             }
 
             withContext(Dispatchers.Main) {
-                setupPieChart(totalExpense.toFloat(), totalMilkCost.toFloat(), totalElec.toFloat(), grandTotal.toFloat())
+                setupPieChart(totalExpenseCost.toFloat(), totalMilkCost.toFloat(), totalElecCost.toFloat(), grandTotal.toFloat())
                 setupElectricityCharts(elecList)
                 setupElectricityYoYChart(elecList)
                 setupMilkCharts(milkList)
                 setupMilkYoYChart(milkList)
                 setupExpenseCharts(expenseList)
+
+                // Trigger final UI update and single smooth animation
+                updateElecChartVisibility(true)
+                updateMilkChartVisibility(true)
+                updateExpenseVisibility(true)
 
                 // --- ELECTRICITY BUTTONS VISIBILITY ---
                 val elecBtnAi = findViewById<ImageButton>(R.id.btnElecAi)
@@ -515,11 +593,11 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                         val lastRecord = historicalMilkList.lastOrNull()
                         val lastMonthName = lastRecord?.monthName ?: ""
                         val lastYear = lastRecord?.year ?: 0
-                        val cal = Calendar.getInstance()
-                        cal.set(Calendar.MONTH, lastRecord?.monthIndex ?: 0)
-                        cal.set(Calendar.YEAR, lastYear)
-                        cal.add(Calendar.MONTH, 1)
-                        val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(cal.time)
+                        val calPredict = Calendar.getInstance()
+                        calPredict.set(Calendar.MONTH, lastRecord?.monthIndex ?: 0)
+                        calPredict.set(Calendar.YEAR, lastYear)
+                        calPredict.add(Calendar.MONTH, 1)
+                        val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calPredict.time)
                         val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthName $lastYear. Predict for: $predictMonthName only.]"
                         startAiInsight("Milk", summaryWithContext, historicalMilkList.size)
                     }
@@ -673,7 +751,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         barChartMilkYoY.setVisibleXRangeMaximum(6f)
         barChartMilkYoY.moveViewToX(12f)
         barChartMilkYoY.invalidate()
-        barChartMilkYoY.animateY(1000)
     }
 
     // ================== ELECTRICITY CHARTS ==================
@@ -769,7 +846,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         barChartYoY.setVisibleXRangeMaximum(6f)
         barChartYoY.moveViewToX(12f)
         barChartYoY.invalidate()
-        barChartYoY.animateY(1000)
     }
 
     private fun setupElectricityCharts(records: List<Electricity>) {
@@ -877,7 +953,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         val pieData = PieData(dataSet)
         pieChartExpenseCategory.data = pieData
         applyChartTheme(pieChartExpenseCategory)
-        pieChartExpenseCategory.animateY(1400)
         pieChartExpenseCategory.invalidate()
 
         // Custom Legend
@@ -964,7 +1039,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         chart.moveViewToX(entries.size.toFloat())
         chart.extraBottomOffset = 10f
         chart.invalidate()
-        chart.animateY(1400)
     }
 
     private fun setupPieChart(exp: Float, milk: Float, elec: Float, grandTotal: Float) {
