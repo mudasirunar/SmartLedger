@@ -71,10 +71,6 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 } else if (actionMode != null) {
                     actionMode?.finish()
                 } else {
-                    // Navigate back to Dashboard
-                    val intent = Intent(this@MilkActivity, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    startActivity(intent)
                     finish()
                 }
             }
@@ -361,6 +357,14 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_analytics -> {
+                val mainIntent = Intent(this, MainActivity::class.java)
+                mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                val parentIntent = Intent(this, MilkActivity::class.java)
+                val targetIntent = Intent(this, AnalyticsActivity::class.java)
+                startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+                true
+            }
             R.id.action_select_mode -> {
                 if (actionMode == null) {
                     actionMode = startSupportActionMode(actionModeCallback)
@@ -415,23 +419,23 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             finish()
                         }
                         R.id.nav_electricity -> {
-                            val intent = Intent(this@MilkActivity, ElectricityActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@MilkActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@MilkActivity, ElectricityActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_milk -> {/* Already Here*/}
                         R.id.nav_expenses -> {
-                            val intent = Intent(this@MilkActivity, ExpenseActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@MilkActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@MilkActivity, ExpenseActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_analytics -> {
-                            val intent = Intent(this@MilkActivity, AnalyticsActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@MilkActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@MilkActivity, AnalyticsActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_trash -> {
                             val intent = Intent(this@MilkActivity, TrashBinActivity::class.java)

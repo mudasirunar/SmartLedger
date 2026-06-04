@@ -75,10 +75,6 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
                 } else if (actionMode != null) {
                     actionMode?.finish()
                 } else {
-                    // Navigate back to Dashboard
-                    val intent = Intent(this@ElectricityActivity, MainActivity::class.java) // Change Activity Name accordingly
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    startActivity(intent)
                     finish()
                 }
             }
@@ -277,6 +273,14 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_analytics -> {
+                val mainIntent = Intent(this, MainActivity::class.java)
+                mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                val parentIntent = Intent(this, ElectricityActivity::class.java)
+                val targetIntent = Intent(this, AnalyticsActivity::class.java)
+                startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+                true
+            }
             R.id.action_select_mode -> {
                 if (actionMode == null) {
                     actionMode = startSupportActionMode(actionModeCallback)
@@ -373,22 +377,22 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
                         }
                         R.id.nav_electricity -> { /* Already here */ }
                         R.id.nav_milk -> {
-                            val intent = Intent(this@ElectricityActivity, MilkActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@ElectricityActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@ElectricityActivity, MilkActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_expenses -> {
-                            val intent = Intent(this@ElectricityActivity, ExpenseActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@ElectricityActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@ElectricityActivity, ExpenseActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_analytics -> {
-                            val intent = Intent(this@ElectricityActivity, AnalyticsActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@ElectricityActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@ElectricityActivity, AnalyticsActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_trash -> {
                             val intent = Intent(this@ElectricityActivity, TrashBinActivity::class.java)

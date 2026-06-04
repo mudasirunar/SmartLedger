@@ -90,7 +90,9 @@
                                     android:text="Electricity: Units"
                                     android:textSize="18sp"
                                     android:textStyle="bold"
-                                    android:textColor="@color/teal_main"/>
+                                    android:textColor="@color/teal_main"
+                                    android:clickable="true"
+                                    android:focusable="true"/>
                                 <TextView
                                     android:id="@+id/tvElecSubtitle"
                                     android:layout_width="wrap_content"
@@ -229,7 +231,9 @@
                                     android:text="Milk: Litres"
                                     android:textSize="18sp"
                                     android:textStyle="bold"
-                                    android:textColor="@color/teal_main"/>
+                                    android:textColor="@color/teal_main"
+                                    android:clickable="true"
+                                    android:focusable="true"/>
                                 <TextView
                                     android:id="@+id/tvMilkSubtitle"
                                     android:layout_width="wrap_content"
@@ -368,7 +372,9 @@
                                     android:text="Expenses: Monthly"
                                     android:textSize="18sp"
                                     android:textStyle="bold"
-                                    android:textColor="@color/teal_main"/>
+                                    android:textColor="@color/teal_main"
+                                    android:clickable="true"
+                                    android:focusable="true"/>
                                 <TextView
                                     android:id="@+id/tvExpenseSubtitle"
                                     android:layout_width="wrap_content"

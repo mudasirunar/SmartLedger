@@ -264,6 +264,29 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         tvExpenseSubtitle = findViewById(R.id.tvExpenseSubtitle)
         btnExpensePrev = findViewById(R.id.btnExpensePrev)
         btnExpenseNext = findViewById(R.id.btnExpenseNext)
+
+        // Navigation from Titles
+        tvElecTitle.setOnClickListener {
+            val mainIntent = Intent(this, MainActivity::class.java)
+            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            val parentIntent = Intent(this, AnalyticsActivity::class.java)
+            val targetIntent = Intent(this, ElectricityActivity::class.java)
+            startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+        }
+        tvMilkTitle.setOnClickListener {
+            val mainIntent = Intent(this, MainActivity::class.java)
+            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            val parentIntent = Intent(this, AnalyticsActivity::class.java)
+            val targetIntent = Intent(this, MilkActivity::class.java)
+            startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+        }
+        tvExpenseTitle.setOnClickListener {
+            val mainIntent = Intent(this, MainActivity::class.java)
+            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            val parentIntent = Intent(this, AnalyticsActivity::class.java)
+            val targetIntent = Intent(this, ExpenseActivity::class.java)
+            startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+        }
     }
 
     private fun getThemeColor(attr: Int): Int {
@@ -1132,10 +1155,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         val topAppBar = findViewById<MaterialToolbar>(R.id.topAppBar)
 
         topAppBar.setNavigationOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            startActivity(intent)
-            finish()
+            onBackPressedDispatcher.onBackPressed()
         }
 
         navigationView.setNavigationItemSelectedListener(this)
@@ -1166,22 +1186,22 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                         }
                         R.id.nav_analytics -> { /* Already here */ }
                         R.id.nav_electricity -> {
-                            val intent = Intent(this@AnalyticsActivity, ElectricityActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@AnalyticsActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@AnalyticsActivity, ElectricityActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_milk -> {
-                            val intent = Intent(this@AnalyticsActivity, MilkActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@AnalyticsActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@AnalyticsActivity, MilkActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_expenses -> {
-                            val intent = Intent(this@AnalyticsActivity, ExpenseActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
+                            val mainIntent = Intent(this@AnalyticsActivity, MainActivity::class.java)
+                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            val targetIntent = Intent(this@AnalyticsActivity, ExpenseActivity::class.java)
+                            startActivities(arrayOf(mainIntent, targetIntent))
                         }
                         R.id.nav_trash -> {
                             startActivity(Intent(this@AnalyticsActivity, TrashBinActivity::class.java))
