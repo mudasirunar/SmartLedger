@@ -141,8 +141,7 @@
         <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:padding="20dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Define Fields" android:textSize="18sp" android:textStyle="bold"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Add specific fields you want to track for each entry." android:textSize="12sp" android:textColor="@color/text_secondary"/>
-                <TextView android:id="@+id/tvFieldsSubtitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Date and Amount are already included..." android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
+                <TextView android:id="@+id/tvFieldsSubtitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Add specific fields you want to track." android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
                 <LinearLayout android:id="@+id/containerFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="16dp" />
                 <Button android:id="@+id/btnAddField" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="+ Add Field" android:textColor="@color/teal_main" />
                 <TextView
@@ -172,6 +171,40 @@
                 <TextView android:id="@+id/tvPricingSub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Set how you want to calculate amounts." android:textSize="12sp" android:textColor="@color/text_secondary"/>
 
                 <LinearLayout android:id="@+id/containerPricingRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="16dp" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="@color/tile_bg"
+                    app:strokeWidth="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Pricing Options Guide"
+                            android:textStyle="bold"
+                            android:textSize="14sp"
+                            android:textColor="@color/teal_main"
+                            android:drawableStart="@drawable/ic_info"
+                            android:drawablePadding="8dp"
+                            android:gravity="center_vertical"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="• Global Price: Apply a single rate to all your tracking fields (useful if all columns share the same unit cost).\n\n• Individual Price: Set different rates for each field separately for precise calculation.\n\n• Fixed Price (Toggle ON): Lock the rate now. This price will be used automatically for all future records and won't be editable during data entry.\n\n• Flexible Price (Toggle OFF): Don't set a price now. This allows you to enter or change the rate manually every time you start a new monthly record."
+                            android:textSize="13sp"
+                            android:lineSpacingExtra="4dp"
+                            android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
         </ScrollView>
     </ViewFlipper>

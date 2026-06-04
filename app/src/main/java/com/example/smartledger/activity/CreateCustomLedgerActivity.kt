@@ -285,9 +285,9 @@ class CreateCustomLedgerActivity : AppCompatActivity() {
 
         val tvFieldsSubtitle = findViewById<TextView>(R.id.tvFieldsSubtitle)
         if (isDailyLog) {
-            tvFieldsSubtitle?.text = "Add columns to track ."
+            tvFieldsSubtitle?.text = "Specify up to 3 columns to track daily."
         } else {
-            tvFieldsSubtitle?.text = "Date and Amount are already included. Add extra fields if needed, or leave empty."
+            tvFieldsSubtitle?.text = "Date and Amount are already included. Add extra fields if needed."
         }
 
         val progressValue = when (currentStep) {
