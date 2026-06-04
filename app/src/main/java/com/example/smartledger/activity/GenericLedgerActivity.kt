@@ -689,8 +689,18 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
 
     override fun onResume() {
         super.onResume()
+        setupHeader()
         navigationView.setCheckedItem(ledger.id + 1000)
         findViewById<FloatingActionButton>(R.id.fabAdd).show()
+    }
+
+    private fun setupHeader() {
+        val navView = findViewById<NavigationView>(R.id.navigationView)
+        val headerView = navView.getHeaderView(0)
+        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
+
+        val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
+        tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
     }
 
     private fun showDeleteLedgerDialog() {
