@@ -29,6 +29,7 @@ import com.example.smartledger.adapter.MilkMonthAdapter
 import com.example.smartledger.data.AppDatabase
 import com.example.smartledger.data.DailyEntry
 import com.example.smartledger.data.MilkRecord
+import com.example.smartledger.util.AiHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
@@ -363,6 +364,27 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val parentIntent = Intent(this, MilkActivity::class.java)
                 val targetIntent = Intent(this, AnalyticsActivity::class.java)
                 startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+                true
+            }
+            R.id.action_ai_analysis -> {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val list = db.milkDao().getAllRaw().filter { !it.isDeleted }
+                    if (list.isNotEmpty()) {
+                        val summary = AiHelper.summarizeMilk(list)
+                        withContext(Dispatchers.Main) {
+                            val intent = Intent(this@MilkActivity, AiInsightActivity::class.java).apply {
+                                putExtra("DATA_TYPE", "Milk")
+                                putExtra("DATA_SUMMARY", summary)
+                                putExtra("RECORD_COUNT", list.size)
+                            }
+                            startActivity(intent)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MilkActivity, "No data for analysis", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
                 true
             }
             R.id.action_select_mode -> {

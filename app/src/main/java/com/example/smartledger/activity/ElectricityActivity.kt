@@ -27,6 +27,7 @@ import com.example.smartledger.R
 import com.example.smartledger.adapter.ElectricityAdapter
 import com.example.smartledger.data.AppDatabase
 import com.example.smartledger.data.Electricity
+import com.example.smartledger.util.AiHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
@@ -279,6 +280,27 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
                 val parentIntent = Intent(this, ElectricityActivity::class.java)
                 val targetIntent = Intent(this, AnalyticsActivity::class.java)
                 startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+                true
+            }
+            R.id.action_ai_analysis -> {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val list = db.electricityDao().getAllRaw().filter { !it.isDeleted }
+                    if (list.isNotEmpty()) {
+                        val summary = AiHelper.summarizeElectricity(list)
+                        withContext(Dispatchers.Main) {
+                            val intent = Intent(this@ElectricityActivity, AiInsightActivity::class.java).apply {
+                                putExtra("DATA_TYPE", "Electricity")
+                                putExtra("DATA_SUMMARY", summary)
+                                putExtra("RECORD_COUNT", list.size)
+                            }
+                            startActivity(intent)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@ElectricityActivity, "No data for analysis", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
                 true
             }
             R.id.action_select_mode -> {

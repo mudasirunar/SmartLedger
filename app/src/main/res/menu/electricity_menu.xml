@@ -8,6 +8,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_ai_analysis"
+        android:title="AI Analysis"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_select_mode"
         android:title="Select Item(s)"
         app:showAsAction="never" />

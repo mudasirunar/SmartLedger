@@ -27,6 +27,7 @@ import com.example.smartledger.R
 import com.example.smartledger.adapter.ExpenseAdapter
 import com.example.smartledger.data.AppDatabase
 import com.example.smartledger.data.Expense
+import com.example.smartledger.util.AiHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
@@ -225,6 +226,27 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
                 val parentIntent = Intent(this, ExpenseActivity::class.java)
                 val targetIntent = Intent(this, AnalyticsActivity::class.java)
                 startActivities(arrayOf(mainIntent, parentIntent, targetIntent))
+                true
+            }
+            R.id.action_ai_analysis -> {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val list = db.expenseDao().getAllRaw().filter { !it.isDeleted }
+                    if (list.isNotEmpty()) {
+                        val summary = AiHelper.summarizeExpenses(list)
+                        withContext(Dispatchers.Main) {
+                            val intent = Intent(this@ExpenseActivity, AiInsightActivity::class.java).apply {
+                                putExtra("DATA_TYPE", "Expense")
+                                putExtra("DATA_SUMMARY", summary)
+                                putExtra("RECORD_COUNT", list.size)
+                            }
+                            startActivity(intent)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@ExpenseActivity, "No data for analysis", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
                 true
             }
             R.id.action_select_mode -> {

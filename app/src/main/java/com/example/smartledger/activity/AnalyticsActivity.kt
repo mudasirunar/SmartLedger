@@ -679,7 +679,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 if (hasExpenseData) {
                     expenseBtnAi.setOnClickListener {
                         val summary = AiHelper.summarizeExpenses(expenseList)
-                        startAiInsight("General Expenses", summary, expenseList.size)
+                        startAiInsight("Expense", summary, expenseList.size)
                     }
                 }
             }
