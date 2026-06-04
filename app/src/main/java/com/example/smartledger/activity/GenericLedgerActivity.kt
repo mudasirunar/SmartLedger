@@ -249,7 +249,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                 if (dy > 0 && fabAdd.isShown) {
                     fabAdd.hide()
                 }
-                else if (dy < 0 && !fabAdd.isShown) {
+                else if (dy < 0 && !fabAdd.isShown && actionMode == null) {
                     fabAdd.show()
                 }
             }
@@ -361,7 +361,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
-        if (ev != null) gestureDetector.onTouchEvent(ev)
+        if (ev != null && actionMode == null) gestureDetector.onTouchEvent(ev)
         return super.dispatchTouchEvent(ev)
     }
 

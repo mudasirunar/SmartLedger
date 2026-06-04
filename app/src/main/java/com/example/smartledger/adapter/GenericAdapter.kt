@@ -77,13 +77,39 @@ class GenericAdapter(
         val item = getItem(position)
         holder.bind(item, ledger, isSelectionMode, selectedItems.contains(item))
 
-        holder.itemView.setOnClickListener {
-            if (isSelectionMode) toggleSelection(item)
-            else onNormalClick(item)
+        // Movement-aware touch listener to distinguish between a tap and a swipe/scroll
+        val touchListener = object : View.OnTouchListener {
+            private var startX = 0f
+            private var startY = 0f
+            private val touchSlop = 20
+            var longClickConsumed = false
+
+            override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        startX = event.x
+                        startY = event.y
+                        longClickConsumed = false
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        val dx = Math.abs(event.x - startX)
+                        val dy = Math.abs(event.y - startY)
+                        if (dx < touchSlop && dy < touchSlop && !longClickConsumed) {
+                            if (isSelectionMode) toggleSelection(item)
+                            else onNormalClick(item)
+                            v.performClick()
+                        }
+                    }
+                }
+                return false
+            }
         }
+
+        holder.itemView.setOnTouchListener(touchListener)
 
         holder.itemView.setOnLongClickListener {
             if (!isSelectionMode) {
+                touchListener.longClickConsumed = true
                 startSelectionMode(item)
                 onLongClick()
             }
@@ -215,10 +241,31 @@ class DailyRecordAdapter(
         val item = getItem(position)
         holder.bind(item, ledger, isSelectionMode, selectedItems.contains(item))
 
-        holder.itemView.setOnClickListener {
-            if (isSelectionMode) toggleSelection(item)
-            else onItemClick(item)
-        }
+        // Movement-aware touch listener to distinguish between a tap and a swipe/scroll
+        holder.itemView.setOnTouchListener(object : View.OnTouchListener {
+            private var startX = 0f
+            private var startY = 0f
+            private val touchSlop = 20 // 20 pixels threshold
+
+            override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        startX = event.x
+                        startY = event.y
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        val dx = Math.abs(event.x - startX)
+                        val dy = Math.abs(event.y - startY)
+                        if (dx < touchSlop && dy < touchSlop) {
+                            if (isSelectionMode) toggleSelection(item)
+                            else onItemClick(item)
+                            v.performClick()
+                        }
+                    }
+                }
+                return false // Return false to allow other interactions like long click
+            }
+        })
 
         holder.itemView.setOnLongClickListener {
             if (!isSelectionMode) {

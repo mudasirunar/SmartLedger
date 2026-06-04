@@ -447,7 +447,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
     // SCROLL FIXES
     private fun fixChartScrollConflict() {
-        val onTouchListener = View.OnTouchListener { v, event ->
+        // PieCharts capture all directions for spinning
+        val pieTouchListener = View.OnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> v.parent.requestDisallowInterceptTouchEvent(true)
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.parent.requestDisallowInterceptTouchEvent(false)
@@ -455,43 +456,85 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             false
         }
 
+        // BarCharts only capture horizontal scrolls, allowing page vertical scrolling
+        val barTouchListener = object : View.OnTouchListener {
+            private var startX = 0f
+            private var startY = 0f
+            private var directionVerified = false
+            private var isHorizontal = false
+
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startX = event.x
+                        startY = event.y
+                        directionVerified = false
+                        isHorizontal = false
+                        // Allow intercept by default until we know direction
+                        v.parent.requestDisallowInterceptTouchEvent(false)
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (!directionVerified) {
+                            val dx = abs(event.x - startX)
+                            val dy = abs(event.y - startY)
+                            if (dx > 20 || dy > 20) {
+                                directionVerified = true
+                                if (dx > dy) {
+                                    isHorizontal = true
+                                    v.parent.requestDisallowInterceptTouchEvent(true)
+                                } else {
+                                    isHorizontal = false
+                                    v.parent.requestDisallowInterceptTouchEvent(false)
+                                    // Return true here to "consume" and kill the chart's own drag reaction for this gesture
+                                    return true 
+                                }
+                            }
+                        } else if (!isHorizontal) {
+                            // If we already verified it's vertical, don't let chart see it
+                            return true
+                        }
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        v.parent.requestDisallowInterceptTouchEvent(false)
+                    }
+                }
+                // If it's horizontal or we haven't decided yet, let the chart process its own events (panning etc)
+                return false
+            }
+        }
+
+        listOf(pieChart, pieChartExpenseCategory).forEach { it.setOnTouchListener(pieTouchListener) }
+
         listOf(
-            pieChart, barChartUnits, barChartCost, barChartYoY,
+            barChartUnits, barChartCost, barChartYoY,
             barChartMilkLitres, barChartMilkCost, barChartMilkYoY,
-            barChartExpenseMonthly, pieChartExpenseCategory
-        ).forEach { it.setOnTouchListener(onTouchListener) }
+            barChartExpenseMonthly
+        ).forEach {
+            it.setOnTouchListener(barTouchListener)
+            it.isDragYEnabled = false // Ensure vertical dragging is disabled internally
+        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         if (ev != null) {
-            if (isPointInsideView(ev.rawX, ev.rawY, pieChart)) return super.dispatchTouchEvent(ev)
+            // Only allow drawer to open if touch is NOT inside any chart area
+            val charts = listOf(
+                pieChart, barChartUnits, barChartCost, barChartYoY,
+                barChartMilkLitres, barChartMilkCost, barChartMilkYoY,
+                barChartExpenseMonthly, pieChartExpenseCategory
+            )
 
-            val activeElec = when (currentElecChartIndex) {
-                0 -> barChartUnits
-                1 -> barChartCost
-                2 -> barChartYoY
-                else -> null
-            }
-            if (activeElec != null && isPointInsideView(ev.rawX, ev.rawY, activeElec)) {
-                return super.dispatchTouchEvent(ev)
-            }
-
-            val activeMilk = when (currentMilkChartIndex) {
-                0 -> barChartMilkLitres
-                1 -> barChartMilkCost
-                2 -> barChartMilkYoY
-                else -> null
-            }
-            if (activeMilk != null && isPointInsideView(ev.rawX, ev.rawY, activeMilk)) {
-                return super.dispatchTouchEvent(ev)
+            var isInsideChart = false
+            for (chart in charts) {
+                if (isPointInsideView(ev.rawX, ev.rawY, chart)) {
+                    isInsideChart = true
+                    break
+                }
             }
 
-            val activeExpense = if (currentExpenseChartIndex == 0) barChartExpenseMonthly else pieChartExpenseCategory
-            if (activeExpense.visibility == View.VISIBLE && isPointInsideView(ev.rawX, ev.rawY, activeExpense)) {
-                return super.dispatchTouchEvent(ev)
+            if (!isInsideChart) {
+                gestureDetector.onTouchEvent(ev)
             }
-
-            gestureDetector.onTouchEvent(ev)
         }
         return super.dispatchTouchEvent(ev)
     }

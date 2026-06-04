@@ -87,15 +87,38 @@ class ExpenseAdapter(
         val expense = getItem(position)
         holder.bind(expense, isSelectionMode, selectedItems.contains(expense.id))
 
-        holder.itemView.setOnClickListener {
-            if (isSelectionMode) {
-                toggleSelection(position)
-            } else {
-                onNormalClick(expense)
+        // Movement-aware touch listener to distinguish between a tap and a swipe/scroll
+        val touchListener = object : View.OnTouchListener {
+            private var startX = 0f
+            private var startY = 0f
+            private val touchSlop = 20
+            var longClickConsumed = false
+
+            override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        startX = event.x
+                        startY = event.y
+                        longClickConsumed = false
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        val dx = Math.abs(event.x - startX)
+                        val dy = Math.abs(event.y - startY)
+                        if (dx < touchSlop && dy < touchSlop && !longClickConsumed) {
+                            if (isSelectionMode) toggleSelection(position)
+                            else onNormalClick(expense)
+                            v.performClick()
+                        }
+                    }
+                }
+                return false
             }
         }
 
+        holder.itemView.setOnTouchListener(touchListener)
+
         holder.itemView.setOnLongClickListener {
+            touchListener.longClickConsumed = true
             if (!isSelectionMode) {
                 onLongClick()
                 startSelectionMode(position)
