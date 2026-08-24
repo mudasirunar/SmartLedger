@@ -1,17 +1,54 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+*.dex
+
+# Java & Kotlin class files
+*.class
+
+# Generated build output files
+/bin/
+/gen/
+/out/
+/build/
+app/build/
+*/build/
+
+# Gradle directory & files
+.gradle/
+gradle-app.setting
+
+# Local configuration files & credentials (API keys, SDK paths)
 local.properties
-/.kotlin/errors/errors-1772345357641.log
-/.kotlin/errors/errors-1772342496789.log
+/local.properties
+secret.properties
+secrets.properties
+*.jks
+*.keystore
+*.pem
+google-services.json
+GoogleService-Info.plist
+
+# Log files & Kotlin compiler logs
+*.log
+.kotlin/
+/.kotlin/
+
+# Android Studio / IntelliJ IDEA files
+.idea/
+*.iml
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# macOS / OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.SigningConfig
 import java.util.Properties
 
 plugins {
@@ -40,7 +41,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -83,17 +85,17 @@ dependencies {
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.compiler)
     implementation(libs.androidx.material3)
     ksp(libs.androidx.room.compiler)
 
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation(libs.gson)
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
-    implementation("com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava")
-    implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
+    implementation("com.google.guava:listenablefuture:1.0")
+    implementation(libs.glide)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
