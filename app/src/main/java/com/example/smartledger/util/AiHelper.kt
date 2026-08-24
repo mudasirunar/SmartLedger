@@ -19,7 +19,7 @@ import java.util.Locale
 
 object AiHelper {
     private const val BASE_URL = "https://api.groq.com/openai/v1/"
-    private const val MODEL_ID = "llama-3.3-70b-versatile"
+    private const val MODEL_ID = "openai/gpt-oss-120b"
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .addConverterFactory(GsonConverterFactory.create())
