@@ -10,18 +10,18 @@
 # ---------------------------------------------------------------------
 # AI Models & Groq API Service (DO NOT OBFUSCATE OR REMOVE)
 # ---------------------------------------------------------------------
--keep class com.example.smartledger.util.AiHelper** { *; }
--keep class com.example.smartledger.util.GroqRequest { *; }
--keep class com.example.smartledger.util.GroqResponse { *; }
--keep class com.example.smartledger.util.Choice { *; }
--keep class com.example.smartledger.util.AiMessage { *; }
--keep interface com.example.smartledger.util.AiHelper$GroqApiService { *; }
+-keep class com.mudasir.smartledger.util.AiHelper** { *; }
+-keep class com.mudasir.smartledger.util.GroqRequest { *; }
+-keep class com.mudasir.smartledger.util.GroqResponse { *; }
+-keep class com.mudasir.smartledger.util.Choice { *; }
+-keep class com.mudasir.smartledger.util.AiMessage { *; }
+-keep interface com.mudasir.smartledger.util.AiHelper$GroqApiService { *; }
 
 # ---------------------------------------------------------------------
 # App Data Models, Room Entities & DAOs
 # ---------------------------------------------------------------------
--keep class com.example.smartledger.data.** { *; }
--keepclassmembers class com.example.smartledger.data.** { *; }
+-keep class com.mudasir.smartledger.data.** { *; }
+-keepclassmembers class com.mudasir.smartledger.data.** { *; }
 
 -keep @androidx.room.Entity class * { *; }
 -keep @androidx.room.Dao class * { *; }
@@ -36,7 +36,7 @@
 # ---------------------------------------------------------------------
 # Inner Data Classes, Adapters & Activity Serializables
 # ---------------------------------------------------------------------
--keep class com.example.smartledger.activity.CreateCustomLedgerActivity$FieldPricing { *; }
+-keep class com.mudasir.smartledger.activity.CreateCustomLedgerActivity$FieldPricing { *; }
 -keepclassmembers class * implements java.io.Serializable {
     static final long serialVersionUID;
     private static final java.io.ObjectStreamField[] serialPersistentFields;
@@ -91,4 +91,4 @@
 # ---------------------------------------------------------------------
 # BuildConfig
 # ---------------------------------------------------------------------
--keep class com.example.smartledger.BuildConfig { *; }
+-keep class com.mudasir.smartledger.BuildConfig { *; }

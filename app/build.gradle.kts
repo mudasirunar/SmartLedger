@@ -8,15 +8,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.smartledger"
+    namespace = "com.mudasir.smartledger"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.smartledger"
+        applicationId = "com.mudasir.smartledger"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -47,6 +47,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
