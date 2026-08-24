@@ -1,9 +1,12 @@
-# Built application files
+# Built application files & release packages
 *.apk
 *.aar
 *.ap_
 *.aab
 *.dex
+/release/
+app/release/
+*/release/
 
 # Java & Kotlin class files
 *.class
