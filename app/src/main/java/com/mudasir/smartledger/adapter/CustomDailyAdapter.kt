@@ -38,7 +38,6 @@ class CustomDailyAdapter(
         holder.etFields.forEachIndexed { index, et ->
             if (index < fields.size) {
                 et.visibility = View.VISIBLE
-                et.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
 
                 et.hint = "0"
                 et.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->

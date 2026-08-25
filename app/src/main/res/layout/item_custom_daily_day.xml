@@ -32,7 +32,6 @@
             android:gravity="center"
             android:hint="0"
             android:inputType="numberDecimal"
-            android:imeOptions="actionDone"
             android:textColor="@color/teal_main"
             android:textStyle="bold"/>
 
@@ -47,7 +46,6 @@
             android:gravity="center"
             android:hint="0"
             android:inputType="numberDecimal"
-            android:imeOptions="actionDone"
             android:textColor="@color/teal_main"
             android:textStyle="bold"/>
 
@@ -62,7 +60,6 @@
             android:gravity="center"
             android:hint="0"
             android:inputType="numberDecimal"
-            android:imeOptions="actionDone"
             android:textColor="@color/teal_main"
             android:textStyle="bold"/>
     </LinearLayout>
