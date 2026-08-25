@@ -126,7 +126,7 @@ class AiInsightActivity : AppCompatActivity() {
         tvWaking.setTextColor(onSurfaceColor)
         findViewById<TextView>(R.id.tvAiDisclaimer).setTextColor(onSurfaceColor)
 
-        val geminiBlue = resources.getColor(R.color.gemini_blue, null)
+        val geminiBlue = resources.getColor(R.color.ai_blue, null)
         btnRetry.setBackgroundColor(geminiBlue)
         btnRetryPrediction.setBackgroundColor(geminiBlue)
 
@@ -253,7 +253,7 @@ class AiInsightActivity : AppCompatActivity() {
                 tvContent.append(errorSpan)
 
                 btnRetryPrediction.visibility = View.VISIBLE
-                btnRetryPrediction.setBackgroundColor(resources.getColor(R.color.gemini_blue, null))
+                btnRetryPrediction.setBackgroundColor(resources.getColor(R.color.ai_blue, null))
             } else {
                 val predictionHeader = "\n\n━━━━━━━━━━━━━━\n🔮 AI PREDICTION\n"
                 tvContent.append(predictionHeader)

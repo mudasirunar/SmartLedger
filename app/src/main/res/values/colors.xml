@@ -15,11 +15,11 @@
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
 
-    <!-- Gemini -->
-    <color name="gemini_blue">#4285F4</color>
-    <color name="gemini_purple">#9B72CB</color>
-    <color name="gemini_teal">#179A9D</color>
-    <color name="gemini_bg_gradient_start">#1A1C1E</color>
+    <!-- AI Colors -->
+    <color name="ai_blue">#4285F4</color>
+    <color name="ai_purple">#9B72CB</color>
+    <color name="ai_teal">#179A9D</color>
+    <color name="ai_bg_gradient_start">#1A1C1E</color>
 
     <!-- Tile Backgrounds -->
     <color name="tile_bg">#F5F5F5</color>
