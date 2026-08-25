@@ -22,5 +22,5 @@ data class MilkRecord(
 
 data class DailyEntry(
     val day: Int,
-    var liters: Double = 0.0
+    var liters: Double? = null
 ) : Serializable

@@ -28,32 +28,30 @@ class MilkDailyAdapter(
         if (holder.currentWatcher != null) {
             holder.etLiters.removeTextChangedListener(holder.currentWatcher)
         }
-        if (entry.liters == 0.0) {
+        if (entry.liters == null) {
             holder.etLiters.setText("")
         } else {
-            val text = if (entry.liters % 1.0 == 0.0) entry.liters.toInt().toString() else entry.liters.toString()
+            val text = if (entry.liters!! % 1.0 == 0.0) entry.liters!!.toInt().toString() else entry.liters.toString()
             holder.etLiters.setText(text)
         }
         holder.etLiters.hint = "0"
         holder.etLiters.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                holder.etLiters.hint = ""
-            } else {
-                holder.etLiters.hint = "0"
-            }
+            holder.etLiters.hint = if (hasFocus) "" else "0"
         }
 
-        val price = entry.liters * pricePerLiter
+        val price = (entry.liters ?: 0.0) * pricePerLiter
         holder.tvDayPrice.text = "Rs ${price.toInt()}"
         val newWatcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                val input = s.toString()
-                val qty = if (input.isEmpty()) 0.0 else input.toDoubleOrNull() ?: 0.0
-                if (entry.liters != qty) {
-                    entry.liters = qty
-                    val newPrice = qty * pricePerLiter
-                    holder.tvDayPrice.text = "Rs ${newPrice.toInt()}"
-                    onDataChanged()
+                if (holder.etLiters.hasFocus()) {
+                    val input = s.toString().trim()
+                    val qty: Double? = if (input.isEmpty()) null else input.toDoubleOrNull()
+                    if (entry.liters != qty) {
+                        entry.liters = qty
+                        val newPrice = (qty ?: 0.0) * pricePerLiter
+                        holder.tvDayPrice.text = "Rs ${newPrice.toInt()}"
+                        onDataChanged()
+                    }
                 }
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}

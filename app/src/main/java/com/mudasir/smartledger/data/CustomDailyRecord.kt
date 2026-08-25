@@ -20,7 +20,7 @@ data class CustomDailyRecord(
 
 data class CustomDailyEntry(
     val day: Int,
-    var values: MutableList<Double> = mutableListOf(0.0, 0.0, 0.0)
+    var values: MutableList<Double?> = mutableListOf(null, null, null)
 ) : Serializable
 
 

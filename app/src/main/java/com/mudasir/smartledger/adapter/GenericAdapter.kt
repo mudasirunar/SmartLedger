@@ -292,7 +292,7 @@ class DailyRecordAdapter(
             val totals = DoubleArray(ledger.fields.size)
             for (entry in record.dailyEntries) {
                 for (i in entry.values.indices) {
-                    if (i < totals.size) totals[i] += entry.values[i]
+                    if (i < totals.size) totals[i] += (entry.values[i] ?: 0.0)
                 }
             }
 

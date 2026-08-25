@@ -208,7 +208,7 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 else -> 31
             }
 
-            val dailyEntries = (1..daysInMonth).map { DailyEntry(it, 0.0) }
+            val dailyEntries = (1..daysInMonth).map { DailyEntry(it, null) }
             val record = MilkRecord(
                 monthName = "$monthName $selectedYear",
                 monthIndex = monthIndex,

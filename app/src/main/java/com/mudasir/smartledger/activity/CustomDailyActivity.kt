@@ -147,7 +147,7 @@ class CustomDailyActivity : AppCompatActivity() {
         var totalAmount = 0.0
         adapter.dailyEntries.forEach { entry ->
             ledger.fields.forEachIndexed { index, field ->
-                val qty = entry.values.getOrElse(index) { 0.0 }
+                val qty = entry.values.getOrNull(index) ?: 0.0
                 totalQty += qty
                 totalAmount += qty * getPriceForField(field.fieldName, pricing)
             }
@@ -161,7 +161,7 @@ class CustomDailyActivity : AppCompatActivity() {
         var total = 0.0
         adapter.dailyEntries.forEach { entry ->
             ledger.fields.forEachIndexed { index, field ->
-                val qty = entry.values.getOrElse(index) { 0.0 }
+                val qty = entry.values.getOrNull(index) ?: 0.0
                 total += qty * getPriceForField(field.fieldName, pricing)
             }
         }

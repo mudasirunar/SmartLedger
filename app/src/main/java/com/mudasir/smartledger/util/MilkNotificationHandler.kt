@@ -54,7 +54,7 @@ class MilkMorningWorker(val context: Context, workerParams: WorkerParameters) : 
         val todayDay = cal.get(Calendar.DAY_OF_MONTH)
         val todayEntry = activeMonth?.dailyEntries?.find { it.day == todayDay }
 
-        if (todayEntry != null && todayEntry.liters > 0.0) {
+        if (todayEntry != null && (todayEntry.liters ?: 0.0) > 0.0) {
             MilkNotificationHandler.scheduleMidnightCheck(context)
             return Result.success()
         }
@@ -151,7 +151,7 @@ class MilkMidnightWorker(val context: Context, workerParams: WorkerParameters) :
 
         val yesterdayEntry = activeMonth?.dailyEntries?.find { it.day == targetDay }
 
-        if (yesterdayEntry != null && yesterdayEntry.liters > 0.0) {
+        if (yesterdayEntry != null && (yesterdayEntry.liters ?: 0.0) > 0.0) {
             MilkNotificationHandler.scheduleMorningNotification(context)
             return Result.success()
         }
@@ -223,7 +223,7 @@ class MilkNotificationReceiver : BroadcastReceiver() {
             if (it.day == day) it.copy(liters = liters) else it
         }
 
-        val totalL = updatedEntries.sumOf { it.liters }
+        val totalL = updatedEntries.sumOf { it.liters ?: 0.0 }
         db.milkDao().update(record.copy(
             dailyEntries = updatedEntries,
             totalLiters = totalL,

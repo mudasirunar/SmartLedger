@@ -47,14 +47,24 @@ class CustomDailyAdapter(
 
                 holder.watchers[index]?.let { et.removeTextChangedListener(it) }
 
-                val value = entry.values.getOrElse(index) { 0.0 }
-                et.setText(if (value == 0.0) "" else value.toString().removeSuffix(".0"))
+                val value: Double? = entry.values.getOrNull(index)
+
+                if (value == null) {
+                    et.setText("")
+                } else {
+                    val text = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
+                    et.setText(text)
+                }
 
                 val watcher = object : TextWatcher {
                     override fun afterTextChanged(s: Editable?) {
                         if (et.hasFocus()) {
-                            val qty = s.toString().toDoubleOrNull() ?: 0.0
-                            if (entry.values.getOrElse(index) { 0.0 } != qty) {
+                            val input = s.toString().trim()
+                            val qty: Double? = if (input.isEmpty()) null else input.toDoubleOrNull()
+                            while (entry.values.size <= index) {
+                                entry.values.add(null)
+                            }
+                            if (entry.values[index] != qty) {
                                 entry.values[index] = qty
                                 updateRowTotal(holder)
                                 onDataChanged()
@@ -81,7 +91,7 @@ class CustomDailyAdapter(
         var total = 0.0
 
         ledger.fields.forEachIndexed { index, field ->
-            val qty = entry.values.getOrElse(index) { 0.0 }
+            val qty = entry.values.getOrNull(index) ?: 0.0
             val price = pricingMap[field.fieldName] ?: pricingMap["MASTER_GLOBAL_PRICE"] ?: 0.0
             if (price > 0) total += (qty * price)
         }

@@ -137,8 +137,9 @@ class ViewMilkActivity : AppCompatActivity() {
         var l = 0.0
         var amt = 0.0
         record!!.dailyEntries.forEach {
-            l += it.liters
-            amt += (it.liters * record!!.pricePerLiter)
+            val qty = it.liters ?: 0.0
+            l += qty
+            amt += (qty * record!!.pricePerLiter)
         }
         tvTotalLiters.text = String.format("%.1f", l)
         tvTotalAmount.text = "Rs ${amt.toInt()}"
@@ -148,7 +149,7 @@ class ViewMilkActivity : AppCompatActivity() {
         updateSummaryUI()
 
         var finalLiters = 0.0
-        record!!.dailyEntries.forEach { finalLiters += it.liters }
+        record!!.dailyEntries.forEach { finalLiters += (it.liters ?: 0.0) }
         val finalAmount = finalLiters * record!!.pricePerLiter
 
         val updatedRecord = record!!.copy(
@@ -161,7 +162,7 @@ class ViewMilkActivity : AppCompatActivity() {
                 db.milkDao().update(updatedRecord)
                 val today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
                 val todayEntry = updatedRecord.dailyEntries.find { it.day == today }
-                if (todayEntry != null && todayEntry.liters > 0.0) {
+                if (todayEntry != null && (todayEntry.liters ?: 0.0) > 0.0) {
                     WorkManager.getInstance(applicationContext)
                         .cancelUniqueWork(MilkNotificationConstants.WORK_NAME_MIDNIGHT)
                     val manager = getSystemService(NotificationManager::class.java)
