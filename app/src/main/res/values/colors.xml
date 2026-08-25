@@ -26,4 +26,7 @@
 
     <!-- Splash Background -->
     <color name="splash_bg">#FFFFFFFF</color>
+
+    <!-- Launcher Background -->
+    <color name="ic_launcher_bg">#F4F7F6</color>
 </resources>
