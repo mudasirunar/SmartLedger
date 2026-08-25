@@ -36,7 +36,14 @@ class MilkDailyAdapter(
         }
         holder.etLiters.hint = "0"
         holder.etLiters.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
-            holder.etLiters.hint = if (hasFocus) "" else "0"
+            if (hasFocus) {
+                holder.etLiters.hint = ""
+                holder.etLiters.post {
+                    holder.etLiters.setSelection(holder.etLiters.text.length)
+                }
+            } else {
+                holder.etLiters.hint = "0"
+            }
         }
 
         val price = (entry.liters ?: 0.0) * pricePerLiter

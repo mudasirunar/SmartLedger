@@ -41,7 +41,14 @@ class CustomDailyAdapter(
 
                 et.hint = "0"
                 et.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
-                    et.hint = if (hasFocus) "" else "0"
+                    if (hasFocus) {
+                        et.hint = ""
+                        et.post {
+                            et.setSelection(et.text.length)
+                        }
+                    } else {
+                        et.hint = "0"
+                    }
                 }
 
                 holder.watchers[index]?.let { et.removeTextChangedListener(it) }
