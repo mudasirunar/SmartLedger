@@ -8,9 +8,10 @@
 
     <TextView
         android:id="@+id/tvDay"
-        android:layout_width="45dp"
-        android:text="Day 01"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="01"
         android:textColor="@color/text_primary"
         android:textStyle="bold"/>
 
@@ -68,9 +69,9 @@
 
     <TextView
         android:id="@+id/tvDayPrice"
-        android:layout_width="60dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
+        android:layout_weight="1"
         android:gravity="end"
         android:text="Rs 0"
         android:textColor="#E57373"/>

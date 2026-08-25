@@ -66,8 +66,9 @@
         android:orientation="horizontal">
 
         <TextView
-            android:layout_width="45dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Days"
             android:textStyle="bold"
             android:textColor="@color/teal_main"/>
@@ -84,8 +85,9 @@
         </LinearLayout>
 
         <TextView
-            android:layout_width="60dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Amount"
             android:textStyle="bold"
             android:gravity="end"
