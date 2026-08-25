@@ -53,6 +53,8 @@ import java.util.Locale
 import kotlin.math.abs
 
 
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+
 private const val PREFS_NAME = "SmartLedgerPrefs"
 private const val KEY_LAST_BACKUP = "last_backup"
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -99,6 +101,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)

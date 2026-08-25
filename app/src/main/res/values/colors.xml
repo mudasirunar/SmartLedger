@@ -25,7 +25,7 @@
     <color name="tile_bg">#F5F5F5</color>
 
     <!-- Splash Background -->
-    <color name="splash_bg">#FFFFFFFF</color>
+    <color name="splash_bg">#E0F2F1</color>
 
     <!-- Launcher Background -->
     <color name="ic_launcher_bg">#F4F7F6</color>

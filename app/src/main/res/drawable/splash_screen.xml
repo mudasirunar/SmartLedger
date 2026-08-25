@@ -9,6 +9,6 @@
 
         <bitmap
             android:gravity="fill"
-            android:src="@drawable/app_logo" />
+            android:src="@drawable/splash_logo" />
     </item>
 </layer-list>
