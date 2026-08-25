@@ -24,7 +24,7 @@ class MilkDailyAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val entry = dailyEntries[position]
-        holder.tvDay.text = "Day ${entry.day}"
+        holder.tvDay.text = entry.day.toString()
         if (holder.currentWatcher != null) {
             holder.etLiters.removeTextChangedListener(holder.currentWatcher)
         }
