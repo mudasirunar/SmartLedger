@@ -54,6 +54,7 @@ import kotlin.math.abs
 
 
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.DrawerNavigationHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 
@@ -282,38 +283,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         title: String,
         message: String,
         isCancelable: Boolean = false,
-        onAction: (dialog: androidx.appcompat.app.AlertDialog, views: DialogViews) -> Unit
+        onAction: (dialog: androidx.appcompat.app.AlertDialog, views: DialogHelper.DialogViews) -> Unit
     ) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.setCancelable(isCancelable)
-
-        val views = DialogViews(
-            title = dialogView.findViewById(R.id.tvDialogTitle),
-            message = dialogView.findViewById(R.id.tvDialogMessage),
-            progress = dialogView.findViewById(R.id.dialogProgressBar),
-            details = dialogView.findViewById(R.id.containerDetails),
-            detailTitle = dialogView.findViewById(R.id.tvDetailTitle),
-            detailAmount = dialogView.findViewById(R.id.tvDetailAmount),
-            btnCancel = dialogView.findViewById(R.id.btnDialogCancel),
-            btnConfirm = dialogView.findViewById(R.id.btnDialogConfirm)
-        )
-
-        views.title.text = title
-        views.message.text = message
-        views.details.visibility = View.GONE
-        views.btnConfirm.visibility = View.GONE
-
-        onAction(dialog, views)
+        val dialog = DialogHelper.createConfirmationDialog(this, title, message, isCancelable) { views ->
+            views.details.visibility = View.GONE
+            views.btnConfirm.visibility = View.GONE
+            onAction(views.dialog, views)
+        }
         dialog.show()
     }
-
-    data class DialogViews(
-        val title: TextView, val message: TextView, val progress: LinearProgressIndicator,
-        val details: View, val detailTitle: TextView, val detailAmount: TextView,
-        val btnCancel: View, val btnConfirm: TextView
-    )
 
     // --- BACKUP & RESTORE PROCESSES ---
     private fun performLocalBackup() {
@@ -476,7 +454,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
 
-    private fun showSummary(views: DialogViews, title: String, msg: String, res: RestoreResult, isRestore: Boolean = false) {
+    private fun showSummary(views: DialogHelper.DialogViews, title: String, msg: String, res: RestoreResult, isRestore: Boolean = false) {
         views.progress.visibility = View.GONE
         views.details.visibility = View.VISIBLE
         views.btnCancel.visibility = View.GONE

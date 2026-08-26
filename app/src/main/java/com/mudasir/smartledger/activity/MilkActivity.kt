@@ -33,6 +33,7 @@ import com.mudasir.smartledger.util.AiHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.DrawerNavigationHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.textfield.TextInputEditText
@@ -299,50 +300,33 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showDeleteConfirmationDialog(items: List<MilkRecord>, mode: ActionMode) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setView(dialogView)
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val dialog = DialogHelper.createConfirmationDialog(this) { views ->
+            views.btnConfirm.text = "Delete"
+            if (items.size == 1) {
+                views.title.text = "Delete Record"
+                val item = items[0]
+                views.message.text = "Are you sure you want to delete this record?"
+                views.details.visibility = View.VISIBLE
+                views.detailTitle.text = item.monthName
+                views.detailAmount.text = "Rs ${item.totalAmount.toInt()}"
+            } else {
+                views.title.text = "Delete Records"
+                views.message.text = "Are you sure you want to delete these ${items.size} records?"
+                views.details.visibility = View.GONE
+            }
 
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
-
-
-        btnConfirm.text = "Delete"
-
-        if(items.size == 1) {
-            tvTitle.text = "Delete Record"
-            val item = items[0]
-            tvMessage.text = "Are you sure you want to delete this record?"
-            containerDetails.visibility = View.VISIBLE
-            val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
-            val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
-            tvDetailTitle.text = item.monthName
-            tvDetailAmount.text = "Rs ${item.totalAmount.toInt()}"
-        } else {
-            tvTitle.text = "Delete Records"
-            tvMessage.text = "Are you sure you want to delete these ${items.size} records?"
-            containerDetails.visibility = View.GONE
-        }
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            lifecycleScope.launch {
-                val ids = items.map { it.id }
-
-                withContext(Dispatchers.IO) {
-                    db.milkDao().softDelete(ids, System.currentTimeMillis())
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch {
+                    val ids = items.map { it.id }
+                    withContext(Dispatchers.IO) {
+                        db.milkDao().softDelete(ids, System.currentTimeMillis())
+                    }
+                    val message = if (ids.size == 1) "Item moved to Trash" else "${ids.size} items moved to Trash"
+                    Toast.makeText(this@MilkActivity, message, Toast.LENGTH_SHORT).show()
+                    mode.finish()
                 }
-
-                val message = if (ids.size == 1) "Item moved to Trash" else "${ids.size} items moved to Trash"
-                Toast.makeText(this@MilkActivity, message, Toast.LENGTH_SHORT).show()
-
-                mode.finish()
             }
         }
         dialog.show()

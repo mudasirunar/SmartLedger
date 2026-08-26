@@ -31,6 +31,7 @@ import com.mudasir.smartledger.util.AiHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.DrawerNavigationHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 import kotlinx.coroutines.Dispatchers
@@ -297,52 +298,37 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
     }
 
     private fun showDeleteConfirmationDialog(selectedExpenses: List<Expense>, mode: ActionMode) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setView(dialogView)
+        val dialog = DialogHelper.createConfirmationDialog(this) { views ->
+            views.btnConfirm.text = "Delete"
+            if (selectedExpenses.size == 1) {
+                val expense = selectedExpenses[0]
+                views.title.text = "Delete Record"
+                views.message.text = "Are you sure you want to delete this record?"
+                views.details.visibility = View.VISIBLE
+                views.detailTitle.text = expense.title
+                views.detailAmount.text = "Rs ${expense.amount}"
+            } else {
+                views.title.text = "Delete Records"
+                views.message.text = "Are you sure you want to delete these ${selectedExpenses.size} records?"
+                views.details.visibility = View.GONE
+            }
 
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch {
+                    val idsToDelete = selectedExpenses.map { it.id }
+                    val currentTimestamp = System.currentTimeMillis()
 
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
+                    withContext(Dispatchers.IO) {
+                        db.expenseDao().softDeleteExpenses(idsToDelete, currentTimestamp)
+                    }
 
-        btnConfirm.text = "Delete"
+                    val message = if (idsToDelete.size == 1) "Item moved to Trash" else "${idsToDelete.size} items moved to Trash"
+                    Toast.makeText(this@ExpenseActivity, message, Toast.LENGTH_SHORT).show()
 
-        if (selectedExpenses.size == 1) {
-            val expense = selectedExpenses[0]
-            tvTitle.text = "Delete Record"
-            tvMessage.text = "Are you sure you want to delete this record?"
-            containerDetails.visibility = View.VISIBLE
-            tvDetailTitle.text = expense.title
-            tvDetailAmount.text = "Rs ${expense.amount}"
-
-        } else {
-            tvTitle.text = "Delete Records"
-            tvMessage.text = "Are you sure you want to delete these ${selectedExpenses.size} records?"
-            containerDetails.visibility = View.GONE
-        }
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            lifecycleScope.launch {
-                val idsToDelete = selectedExpenses.map { it.id }
-                val currentTimestamp = System.currentTimeMillis()
-
-                withContext(Dispatchers.IO) {
-                    db.expenseDao().softDeleteExpenses(idsToDelete, currentTimestamp)
+                    mode.finish()
                 }
-
-                val message = if (idsToDelete.size == 1) "Item moved to Trash" else "${idsToDelete.size} items moved to Trash"
-                Toast.makeText(this@ExpenseActivity, message, Toast.LENGTH_SHORT).show()
-
-                mode.finish()
             }
         }
         dialog.show()

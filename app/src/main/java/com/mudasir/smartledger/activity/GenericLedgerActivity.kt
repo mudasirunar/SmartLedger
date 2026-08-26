@@ -41,6 +41,7 @@ import com.mudasir.smartledger.data.PricingConfig
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.DrawerNavigationHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.textfield.TextInputEditText
@@ -301,7 +302,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                     val selected = if (isDaily) dailyAdapter.getSelectedItems() else adapter.getSelectedItems()
 
                     if (selected.isNotEmpty()) {
-                        showDeleteRecordsDialog(selected, mode)
+                        showDeleteConfirmationDialog(selected, mode)
                     } else {
                         Toast.makeText(this@GenericLedgerActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
                     }
@@ -510,69 +511,83 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
         dialogView.findViewById<TextView>(R.id.btnCancel).setOnClickListener { dialog.dismiss() }
         dialog.show()
     }
+    private fun showDeleteConfirmationDialog(items: List<Any>, mode: ActionMode) {
+        val dialog = DialogHelper.createConfirmationDialog(this) { views ->
+            views.btnConfirm.text = "Delete"
 
-    private fun showDeleteRecordsDialog(items: List<Any>, mode: ActionMode) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
-
-        if (items.size == 1) {
-            containerDetails.visibility = View.VISIBLE
-            when (val item = items[0]) {
-                is CustomEntry -> {
-                    tvTitle.text = "Delete Record"
-                    tvMessage.text = "Are you sure you want to delete this record?"
-                    val type = object : TypeToken<Map<String, String>>() {}.type
-                    val dataMap: Map<String, String>? = try { Gson().fromJson(item.dataJson, type) } catch (e: Exception) { null }
-                    val userFields = dataMap?.filterKeys { it != "SYS_END_DATE" }
-                    val firstNonEmpty = userFields?.values?.firstOrNull { it.trim().isNotEmpty() }
-                    tvDetailTitle.text = firstNonEmpty ?: ledger.name
-                    tvDetailAmount.text = "Rs ${item.amount ?: 0.0}"
-                }
-                is CustomDailyRecord -> {
-                    tvTitle.text = "Delete Record"
-                    tvMessage.text = "Are you sure you want to delete this record?"
-                    tvDetailTitle.text = item.monthName
-                    tvDetailAmount.text = "Rs ${item.totalAmount}"
-                }
-            }
-        } else {
-            tvTitle.text = "Delete Items"
-            tvMessage.text = "Are you sure you want to delete these ${items.size} items?"
-            containerDetails.visibility = View.GONE
-        }
-
-        btnConfirm.text = "Delete"
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            val itemType = items[0]
-            val count = items.size
-
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    if (itemType is CustomEntry) {
-                        val ids = items.filterIsInstance<CustomEntry>().map { it.id }
-                        db.customLedgerDao().softDeleteEntries(ids, System.currentTimeMillis())
-                    } else if (itemType is CustomDailyRecord) {
-                        val ids = items.filterIsInstance<CustomDailyRecord>().map { it.id }
-                        db.customLedgerDao().softDeleteDailyRecords(ids, System.currentTimeMillis())
+            if (items.size == 1) {
+                views.details.visibility = View.VISIBLE
+                when (val item = items[0]) {
+                    is CustomEntry -> {
+                        views.title.text = "Delete Record"
+                        views.message.text = "Are you sure you want to delete this record?"
+                        val type = object : TypeToken<Map<String, String>>() {}.type
+                        val dataMap: Map<String, String>? = try { Gson().fromJson(item.dataJson, type) } catch (e: Exception) { null }
+                        val userFields = dataMap?.filterKeys { it != "SYS_END_DATE" }
+                        val firstNonEmpty = userFields?.values?.firstOrNull { it.trim().isNotEmpty() }
+                        views.detailTitle.text = firstNonEmpty ?: ledger.name
+                        views.detailAmount.text = "Rs ${item.amount ?: 0.0}"
+                    }
+                    is CustomDailyRecord -> {
+                        views.title.text = "Delete Record"
+                        views.message.text = "Are you sure you want to delete this record?"
+                        views.detailTitle.text = item.monthName
+                        views.detailAmount.text = "Rs ${item.totalAmount}"
                     }
                 }
+            } else {
+                views.title.text = "Delete Items"
+                views.message.text = "Are you sure you want to delete these ${items.size} items?"
+                views.details.visibility = View.GONE
+            }
 
-                mode.finish()
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                val itemType = items[0]
+                val count = items.size
 
-                val message = if (count == 1) "Item moved to Trash" else "$count items moved to Trash"
-                Toast.makeText(this@GenericLedgerActivity, message, Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        if (itemType is CustomEntry) {
+                            val ids = items.filterIsInstance<CustomEntry>().map { it.id }
+                            db.customLedgerDao().softDeleteEntries(ids, System.currentTimeMillis())
+                        } else if (itemType is CustomDailyRecord) {
+                            val ids = items.filterIsInstance<CustomDailyRecord>().map { it.id }
+                            db.customLedgerDao().softDeleteDailyRecords(ids, System.currentTimeMillis())
+                        }
+                    }
+                    mode.finish()
+                    val message = if (count == 1) "Item moved to Trash" else "$count items moved to Trash"
+                    Toast.makeText(this@GenericLedgerActivity, message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showDeleteLedgerDialog() {
+        val dialog = DialogHelper.createConfirmationDialog(this) { views ->
+            views.details.visibility = View.GONE
+            views.title.text = "Delete Ledger"
+            views.title.setTextColor(resources.getColor(R.color.teal_main, theme))
+            views.message.text = "Are you sure you want to delete '${ledger.name}'? This will move all associated records to the Trash Bin."
+            views.btnConfirm.text = "Delete"
+            views.btnConfirm.setBackgroundResource(R.drawable.bg_btn_pill_red)
+
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val deleteTime = System.currentTimeMillis()
+                    db.customLedgerDao().softDeleteLedger(ledger.id, deleteTime)
+                    db.customLedgerDao().softDeleteOnlyActiveEntriesByLedger(ledger.id, deleteTime)
+                    db.customLedgerDao().softDeleteActiveDailyRecordsByLedger(ledger.id, deleteTime)
+                    withContext(Dispatchers.Main) {
+                        views.dialog.dismiss()
+                        Toast.makeText(this@GenericLedgerActivity, "${ledger.name} moved to Trash", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                }
             }
         }
         dialog.show()
@@ -583,45 +598,6 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
         DrawerNavigationHelper.updateHeaderLastBackup(this, navigationView)
         navigationView.setCheckedItem(ledger.id + 1000)
         findViewById<FloatingActionButton>(R.id.fabAdd).show()
-    }
-
-    private fun showDeleteLedgerDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMsg = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        containerDetails.visibility = View.GONE
-
-        tvTitle.text = "Delete Ledger"
-        tvTitle.setTextColor(resources.getColor(R.color.teal_main, theme))
-        tvMsg.text = "Are you sure you want to delete '${ledger.name}'? This will move all associated records to the Trash Bin."
-
-        btnCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnConfirm.text = "Delete"
-        btnConfirm.setBackgroundResource(R.drawable.bg_btn_pill_red)
-
-        btnConfirm.setOnClickListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                val deleteTime = System.currentTimeMillis()
-                db.customLedgerDao().softDeleteLedger(ledger.id, deleteTime)
-                db.customLedgerDao().softDeleteOnlyActiveEntriesByLedger(ledger.id, deleteTime)
-                db.customLedgerDao().softDeleteActiveDailyRecordsByLedger(ledger.id, deleteTime) // ✅
-                withContext(Dispatchers.Main) {
-                    dialog.dismiss()
-                    Toast.makeText(this@GenericLedgerActivity, "${ledger.name} moved to Trash", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            }
-        }
-        dialog.show()
     }
 
     private fun getActiveSelectionCount(): Int {
