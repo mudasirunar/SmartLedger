@@ -119,6 +119,18 @@ interface CustomLedgerDao {
     @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY year DESC, monthIndex DESC")
     fun getDailyRecordsByLedger(ledgerId: Int): Flow<List<CustomDailyRecord>>
 
+    @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY year DESC, monthIndex DESC")
+    fun getDailyRecordsByDateDesc(ledgerId: Int): Flow<List<CustomDailyRecord>>
+
+    @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY year ASC, monthIndex ASC")
+    fun getDailyRecordsByDateAsc(ledgerId: Int): Flow<List<CustomDailyRecord>>
+
+    @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY totalAmount DESC")
+    fun getDailyRecordsByAmountDesc(ledgerId: Int): Flow<List<CustomDailyRecord>>
+
+    @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY totalAmount ASC")
+    fun getDailyRecordsByAmountAsc(ledgerId: Int): Flow<List<CustomDailyRecord>>
+
     // --- ACTIONS ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: CustomEntry)

@@ -164,7 +164,14 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
         loadJob?.cancel()
         loadJob = lifecycleScope.launch {
             if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) {
-                db.customLedgerDao().getDailyRecordsByLedger(ledger.id).collect { list ->
+                val flow = when (sortType) {
+                    SortType.DATE_DESC -> db.customLedgerDao().getDailyRecordsByDateDesc(ledger.id)
+                    SortType.DATE_ASC -> db.customLedgerDao().getDailyRecordsByDateAsc(ledger.id)
+                    SortType.AMOUNT_DESC -> db.customLedgerDao().getDailyRecordsByAmountDesc(ledger.id)
+                    SortType.AMOUNT_ASC -> db.customLedgerDao().getDailyRecordsByAmountAsc(ledger.id)
+                }
+
+                flow.collect { list ->
                     dailyAdapter.submitList(list) {
                         findViewById<RecyclerView>(R.id.rvGenericRecords).scrollToPosition(0)
                     }
