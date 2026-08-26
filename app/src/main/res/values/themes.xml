@@ -9,6 +9,14 @@
         <item name="actionModeStyle">@style/CustomActionMode</item>
         <item name="actionModeCloseDrawable">@drawable/ic_close</item>
         <item name="android:actionModeCloseDrawable">@drawable/ic_close</item>
+        <item name="android:windowAnimationStyle">@style/SmoothActivityAnimation</item>
+    </style>
+
+    <style name="SmoothActivityAnimation" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:activityOpenExitAnimation">@anim/slide_out_left</item>
+        <item name="android:activityCloseEnterAnimation">@anim/slide_in_left</item>
+        <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
     </style>
 
     <style name="CustomActionMode" parent="Widget.AppCompat.ActionMode">
