@@ -22,6 +22,7 @@ import com.mudasir.smartledger.R
 import com.mudasir.smartledger.adapter.ThumbnailAdapter
 import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.Expense
+import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.textfield.TextInputEditText
@@ -202,14 +203,7 @@ class AddEditExpenseActivity : AppCompatActivity() {
     }
 
     private fun setupWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
-            val bottomPadding = if (imeInsets.bottom > 0) imeInsets.bottom else systemBars.bottom
-
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding)
-            insets
-        }
+        findViewById<View>(R.id.main).applySystemBarPadding(includeIme = true)
     }
 
     private fun initViews() {

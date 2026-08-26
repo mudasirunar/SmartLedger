@@ -27,6 +27,7 @@ import com.mudasir.smartledger.data.CalcHistory
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.launch
+import com.mudasir.smartledger.util.applySystemBarPadding
 import java.text.DecimalFormat
 import kotlin.text.iterator
 
@@ -59,11 +60,7 @@ class CalculatorActivity : AppCompatActivity() {
     }
 
     private fun setupWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        findViewById<View>(R.id.main).applySystemBarPadding()
     }
 
     private fun setupToolbar() {

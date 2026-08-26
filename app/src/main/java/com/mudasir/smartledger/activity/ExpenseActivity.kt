@@ -32,6 +32,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import com.mudasir.smartledger.util.DrawerNavigationHelper
+import com.mudasir.smartledger.util.applySystemBarPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -85,12 +86,7 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
     }
 
     private fun setupWindowInsets() {
-        val mainContent = findViewById<View>(R.id.main_content)
-        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        findViewById<View>(R.id.main_content).applySystemBarPadding()
     }
 
     private fun setupUI() {

@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 import com.mudasir.smartledger.util.DrawerNavigationHelper
+import com.mudasir.smartledger.util.applySystemBarPadding
 
 class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
@@ -89,12 +90,7 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
     }
 
     private fun setupWindowInsets() {
-        val mainContent = findViewById<View>(R.id.main_content)
-        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        findViewById<View>(R.id.main_content).applySystemBarPadding()
     }
 
     private fun setupUI() {

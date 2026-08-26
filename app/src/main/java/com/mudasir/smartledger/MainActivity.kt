@@ -55,6 +55,7 @@ import kotlin.math.abs
 
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.mudasir.smartledger.util.DrawerNavigationHelper
+import com.mudasir.smartledger.util.applySystemBarPadding
 
 private const val PREFS_NAME = "SmartLedgerPrefs"
 private const val KEY_LAST_BACKUP = "last_backup"
@@ -244,18 +245,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setupWindowInsets() {
-        val topAppBar = findViewById<MaterialToolbar>(R.id.topAppBar)
-        ViewCompat.setOnApplyWindowInsetsListener(topAppBar) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(v.paddingLeft, systemBars.top, v.paddingRight, v.paddingBottom)
-            insets
-        }
-        val mainContent = findViewById<View>(R.id.main_content)
-        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, systemBars.bottom)
-            insets
-        }
+        findViewById<View>(R.id.main_content).applySystemBarPadding()
     }
 
     private fun startClock() {
