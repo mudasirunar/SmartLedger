@@ -6,7 +6,12 @@
 *.dex
 /release/
 app/release/
-*/release/
+# Project documentation & agent guidelines (internal)
+/docs/
+docs/
+/.agents/
+.agents/
+AGENTS.md
 
 # Java & Kotlin class files
 *.class
