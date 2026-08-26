@@ -286,40 +286,7 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
     }
 
     private fun setupGestures() {
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            private val SWIPE_THRESHOLD = 100
-            private val SWIPE_VELOCITY_THRESHOLD = 100
-
-            override fun onDown(e: MotionEvent): Boolean {
-                return false
-            }
-
-            override fun onFling(
-                e1: MotionEvent?,
-                e2: MotionEvent,
-                velocityX: Float,
-                velocityY: Float
-            ): Boolean {
-                if (actionMode != null) return false
-
-                if (e1 == null) return false
-                val diffX = e2.x - e1.x
-                val diffY = e2.y - e1.y
-
-                if (abs(diffX) > abs(diffY) &&
-                    abs(diffX) > SWIPE_THRESHOLD &&
-                    abs(velocityX) > SWIPE_VELOCITY_THRESHOLD
-                ) {
-                    if (diffX > 0) {
-                        if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                            drawerLayout.openDrawer(GravityCompat.START)
-                            return true
-                        }
-                    }
-                }
-                return false
-            }
-        })
+        gestureDetector = DrawerNavigationHelper.attachSwipeToOpenDrawer(this, drawerLayout) { actionMode != null }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {

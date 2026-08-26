@@ -552,21 +552,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     }
 
     private fun setupGestures() {
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent): Boolean = false
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vX: Float, vY: Float): Boolean {
-                if (e1 == null) return false
-                val diffX = e2.x - e1.x
-                val diffY = e2.y - e1.y
-                if (abs(diffX) > abs(diffY) && abs(diffX) > 100 && abs(vX) > 100) {
-                    if (diffX > 0 && !drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                        drawerLayout.openDrawer(GravityCompat.START)
-                        return true
-                    }
-                }
-                return false
-            }
-        })
+        gestureDetector = DrawerNavigationHelper.attachSwipeToOpenDrawer(this, drawerLayout)
     }
 
     // DATA LOADING

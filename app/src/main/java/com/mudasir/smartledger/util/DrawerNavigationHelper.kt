@@ -171,4 +171,26 @@ object DrawerNavigationHelper {
         val prefs = activity.getSharedPreferences("SmartLedgerPrefs", Context.MODE_PRIVATE)
         tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
     }
+
+    fun attachSwipeToOpenDrawer(
+        activity: AppCompatActivity,
+        drawerLayout: DrawerLayout,
+        isSelectionActive: () -> Boolean = { false }
+    ): android.view.GestureDetector {
+        return android.view.GestureDetector(activity, object : android.view.GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: android.view.MotionEvent): Boolean = false
+            override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vX: Float, vY: Float): Boolean {
+                if (isSelectionActive() || e1 == null) return false
+                val diffX = e2.x - e1.x
+                val diffY = e2.y - e1.y
+                if (kotlin.math.abs(diffX) > kotlin.math.abs(diffY) && kotlin.math.abs(diffX) > 100 && kotlin.math.abs(vX) > 100) {
+                    if (diffX > 0 && !drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                        drawerLayout.openDrawer(GravityCompat.START)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+    }
 }

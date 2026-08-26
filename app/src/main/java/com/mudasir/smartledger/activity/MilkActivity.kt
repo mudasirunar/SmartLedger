@@ -423,21 +423,7 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setupGestures() {
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent): Boolean = false
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vX: Float, vY: Float): Boolean {
-                if (actionMode != null || e1 == null) return false
-                val diffX = e2.x - e1.x
-                val diffY = e2.y - e1.y
-                if (abs(diffX) > abs(diffY) && abs(diffX) > 100 && abs(vX) > 100) {
-                    if (diffX > 0 && !drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                        drawerLayout.openDrawer(GravityCompat.START)
-                        return true
-                    }
-                }
-                return false
-            }
-        })
+        gestureDetector = DrawerNavigationHelper.attachSwipeToOpenDrawer(this, drawerLayout) { actionMode != null }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {

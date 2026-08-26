@@ -280,19 +280,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setupGestures() {
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                if (e1 == null) return false
-                val diffX = e2.x - e1.x
-                if (diffX > 100 && abs(velocityX) > 100) {
-                    if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                        drawerLayout.openDrawer(GravityCompat.START)
-                        return true
-                    }
-                }
-                return false
-            }
-        })
+        gestureDetector = DrawerNavigationHelper.attachSwipeToOpenDrawer(this, drawerLayout)
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {

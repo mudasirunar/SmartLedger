@@ -344,21 +344,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
     }
 
     private fun setupGestures() {
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent): Boolean = false
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vX: Float, vY: Float): Boolean {
-                if (e1 == null) return false
-                val diffX = e2.x - e1.x
-                val diffY = e2.y - e1.y
-                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 100 && Math.abs(vX) > 100) {
-                    if (diffX > 0 && !drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                        drawerLayout.openDrawer(GravityCompat.START)
-                        return true
-                    }
-                }
-                return false
-            }
-        })
+        gestureDetector = DrawerNavigationHelper.attachSwipeToOpenDrawer(this, drawerLayout) { actionMode != null }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
