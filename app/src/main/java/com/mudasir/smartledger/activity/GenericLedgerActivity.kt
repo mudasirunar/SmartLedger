@@ -43,6 +43,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.DrawerNavigationHelper
+import com.mudasir.smartledger.util.SelectionActionModeHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -117,6 +118,11 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
             R.id.action_select_mode -> {
                 if (actionMode == null) {
                     actionMode = startSupportActionMode(actionModeCallback)
+                    if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) {
+                        dailyAdapter.startSelectionMode(null)
+                    } else {
+                        adapter.startSelectionMode(null)
+                    }
                 }
                 true
             }
@@ -215,7 +221,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                     }
                 },
                 onSelectionChange = { count ->
-                    updateActionModeTitle()
+                    actionMode?.title = "$count Selected"
                     updateSelectAllIcon()
                 }
             )
@@ -235,7 +241,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                     }
                 },
                 onSelectionChange = { count ->
-                    updateActionModeTitle()
+                    actionMode?.title = "$count Selected"
                     updateSelectAllIcon()
                 }
             )
@@ -264,63 +270,43 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
         }
     }
 
-    private val actionModeCallback = object : ActionMode.Callback {
-
-        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            mode.menuInflater.inflate(R.menu.contextual_menu, menu)
-            updateActionModeTitle(mode)
-            window.statusBarColor = ContextCompat.getColor(this@GenericLedgerActivity, R.color.teal_dark)
-            findViewById<FloatingActionButton>(R.id.fabAdd).hide()
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-
-            if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) dailyAdapter.startSelectionMode(null)
-            else adapter.startSelectionMode(null)
-
-            for (i in 0 until menu.size()) {
-                menu.getItem(i).icon?.setTint(android.graphics.Color.WHITE)
-            }
-            return true
-        }
-
-        override fun onPrepareActionMode(mode: ActionMode, menu: Menu) = false
-
-        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            val isDaily = ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG
-
-            return when (item.itemId) {
-                R.id.action_select_all -> {
-                    if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) {
-                        if (dailyAdapter.isAllSelected()) dailyAdapter.deselectAll() else dailyAdapter.selectAll()
-                    } else {
-                        if (adapter.isAllSelected()) adapter.deselectAll() else adapter.selectAll()
+    private val actionModeCallback by lazy {
+        SelectionActionModeHelper.setupActionMode(
+            activity = this,
+            drawerLayout = drawerLayout,
+            fabAdd = findViewById(R.id.fabAdd),
+            menuResId = R.menu.contextual_menu,
+            onActionClicked = { mode, item ->
+                val isDaily = ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG
+                when (item.itemId) {
+                    R.id.action_select_all -> {
+                        if (isDaily) {
+                            if (dailyAdapter.isAllSelected()) dailyAdapter.deselectAll() else dailyAdapter.selectAll()
+                        } else {
+                            if (adapter.isAllSelected()) adapter.deselectAll() else adapter.selectAll()
+                        }
+                        updateActionModeTitle(mode)
+                        updateSelectAllIcon()
+                        true
                     }
-                    updateActionModeTitle(mode)
-                    updateSelectAllIcon()
-                    true
-                }
-                R.id.action_delete_selection -> {
-                    val selected = if (isDaily) dailyAdapter.getSelectedItems() else adapter.getSelectedItems()
-
-                    if (selected.isNotEmpty()) {
-                        showDeleteConfirmationDialog(selected, mode)
-                    } else {
-                        Toast.makeText(this@GenericLedgerActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
+                    R.id.action_delete_selection -> {
+                        val selected = if (isDaily) dailyAdapter.getSelectedItems() else adapter.getSelectedItems()
+                        if (selected.isNotEmpty()) {
+                            showDeleteConfirmationDialog(selected, mode)
+                        } else {
+                            Toast.makeText(this@GenericLedgerActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
+                        }
+                        true
                     }
-                    true
+                    else -> false
                 }
-                else -> false
+            },
+            onDestroy = {
+                if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) dailyAdapter.endSelectionMode()
+                else adapter.endSelectionMode()
+                actionMode = null
             }
-        }
-
-        override fun onDestroyActionMode(mode: ActionMode) {
-            if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) dailyAdapter.endSelectionMode()
-            else adapter.endSelectionMode()
-
-            actionMode = null
-            window.statusBarColor = ContextCompat.getColor(this@GenericLedgerActivity, R.color.teal_main)
-            findViewById<FloatingActionButton>(R.id.fabAdd).show()
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-        }
+        )
     }
 
     private fun updateSelectAllIcon() {

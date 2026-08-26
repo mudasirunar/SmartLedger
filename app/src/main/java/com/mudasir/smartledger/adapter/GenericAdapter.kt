@@ -28,7 +28,7 @@ class GenericAdapter(
     private val onSelectionChange: (Int) -> Unit
 ) : ListAdapter<CustomEntry, GenericAdapter.ViewHolder>(DiffCallback()) {
 
-    private val selectedItems = mutableSetOf<CustomEntry>()
+    private val selectedItems = mutableSetOf<Long>()
     private var isSelectionMode = false
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -36,48 +36,55 @@ class GenericAdapter(
         return ViewHolder(view)
     }
 
-    fun startSelectionMode(target: CustomEntry?) {
-        isSelectionMode = true
-        target?.let { selectedItems.add(it) }
-        notifyDataSetChanged()
-        onSelectionChange(selectedItems.size)
+    fun toggleSelection(position: Int) {
+        if (position in 0 until itemCount) {
+            val item = getItem(position)
+            if (selectedItems.contains(item.id)) selectedItems.remove(item.id)
+            else selectedItems.add(item.id)
+            notifyItemChanged(position)
+            onSelectionChange(selectedItems.size)
+        }
+    }
+
+    fun startSelectionMode(pos: Int? = null) {
+        if (!isSelectionMode) {
+            isSelectionMode = true
+            if (pos != null) {
+                toggleSelection(pos)
+            } else {
+                onSelectionChange(0)
+            }
+            notifyItemRangeChanged(0, itemCount)
+        }
     }
 
     fun endSelectionMode() {
         isSelectionMode = false
         selectedItems.clear()
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChange(0)
-    }
-
-    fun toggleSelection(item: CustomEntry) {
-        if (selectedItems.contains(item)) selectedItems.remove(item)
-        else selectedItems.add(item)
-        notifyItemChanged(currentList.indexOf(item))
-        onSelectionChange(selectedItems.size)
     }
 
     fun selectAll() {
         selectedItems.clear()
-        selectedItems.addAll(currentList)
-        notifyDataSetChanged()
+        selectedItems.addAll(currentList.map { it.id })
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChange(selectedItems.size)
     }
 
     fun deselectAll() {
         selectedItems.clear()
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChange(0)
     }
 
-    fun isAllSelected() = selectedItems.size == currentList.size
-    fun getSelectedItems() = selectedItems.toList()
+    fun isAllSelected() = currentList.isNotEmpty() && selectedItems.size == currentList.size
+    fun getSelectedItems() = currentList.filter { selectedItems.contains(it.id) }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
-        holder.bind(item, ledger, isSelectionMode, selectedItems.contains(item))
+        holder.bind(item, ledger, isSelectionMode, selectedItems.contains(item.id))
 
-        // Movement-aware touch listener to distinguish between a tap and a swipe/scroll
         val touchListener = object : View.OnTouchListener {
             private var startX = 0f
             private var startY = 0f
@@ -95,7 +102,7 @@ class GenericAdapter(
                         val dx = Math.abs(event.x - startX)
                         val dy = Math.abs(event.y - startY)
                         if (dx < touchSlop && dy < touchSlop && !longClickConsumed) {
-                            if (isSelectionMode) toggleSelection(item)
+                            if (isSelectionMode) toggleSelection(position)
                             else onNormalClick(item)
                             v.performClick()
                         }
@@ -108,10 +115,10 @@ class GenericAdapter(
         holder.itemView.setOnTouchListener(touchListener)
 
         holder.itemView.setOnLongClickListener {
+            touchListener.longClickConsumed = true
             if (!isSelectionMode) {
-                touchListener.longClickConsumed = true
-                startSelectionMode(item)
                 onLongClick()
+                startSelectionMode(position)
             }
             true
         }
@@ -194,83 +201,95 @@ class DailyRecordAdapter(
     private val onSelectionChange: (Int) -> Unit
 ) : ListAdapter<CustomDailyRecord, DailyRecordAdapter.ViewHolder>(DiffCallback()) {
 
-    private val selectedItems = mutableSetOf<CustomDailyRecord>()
+    private val selectedItems = mutableSetOf<Int>()
     private var isSelectionMode = false
 
-    fun startSelectionMode(target: CustomDailyRecord?) {
-        isSelectionMode = true
-        target?.let { selectedItems.add(it) }
-        notifyDataSetChanged()
-        onSelectionChange(selectedItems.size)
+    fun toggleSelection(position: Int) {
+        if (position in 0 until itemCount) {
+            val item = getItem(position)
+            if (selectedItems.contains(item.id)) selectedItems.remove(item.id)
+            else selectedItems.add(item.id)
+            notifyItemChanged(position)
+            onSelectionChange(selectedItems.size)
+        }
+    }
+
+    fun startSelectionMode(pos: Int? = null) {
+        if (!isSelectionMode) {
+            isSelectionMode = true
+            if (pos != null) {
+                toggleSelection(pos)
+            } else {
+                onSelectionChange(0)
+            }
+            notifyItemRangeChanged(0, itemCount)
+        }
     }
 
     fun endSelectionMode() {
         isSelectionMode = false
         selectedItems.clear()
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChange(0)
-    }
-
-    fun toggleSelection(item: CustomDailyRecord) {
-        if (selectedItems.contains(item)) selectedItems.remove(item)
-        else selectedItems.add(item)
-        notifyItemChanged(currentList.indexOf(item))
-        onSelectionChange(selectedItems.size)
     }
 
     fun selectAll() {
         selectedItems.clear()
-        selectedItems.addAll(currentList)
-        notifyDataSetChanged()
+        selectedItems.addAll(currentList.map { it.id })
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChange(selectedItems.size)
     }
 
     fun deselectAll() {
         selectedItems.clear()
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
         onSelectionChange(0)
     }
 
-    fun isAllSelected() = selectedItems.size == currentList.size
-    fun getSelectedItems() = selectedItems.toList()
+    fun isAllSelected() = currentList.isNotEmpty() && selectedItems.size == currentList.size
+    fun getSelectedItems() = currentList.filter { selectedItems.contains(it.id) }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_generic_record, parent, false))
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
-        holder.bind(item, ledger, isSelectionMode, selectedItems.contains(item))
+        holder.bind(item, ledger, isSelectionMode, selectedItems.contains(item.id))
 
-        // Movement-aware touch listener to distinguish between a tap and a swipe/scroll
-        holder.itemView.setOnTouchListener(object : View.OnTouchListener {
+        val touchListener = object : View.OnTouchListener {
             private var startX = 0f
             private var startY = 0f
-            private val touchSlop = 20 // 20 pixels threshold
+            private val touchSlop = 20
+            var longClickConsumed = false
 
             override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
                         startX = event.x
                         startY = event.y
+                        longClickConsumed = false
                     }
                     android.view.MotionEvent.ACTION_UP -> {
                         val dx = Math.abs(event.x - startX)
                         val dy = Math.abs(event.y - startY)
-                        if (dx < touchSlop && dy < touchSlop) {
-                            if (isSelectionMode) toggleSelection(item)
+                        if (dx < touchSlop && dy < touchSlop && !longClickConsumed) {
+                            if (isSelectionMode) toggleSelection(position)
                             else onItemClick(item)
                             v.performClick()
                         }
                     }
                 }
-                return false // Return false to allow other interactions like long click
+                return false
             }
-        })
+        }
+
+        holder.itemView.setOnTouchListener(touchListener)
 
         holder.itemView.setOnLongClickListener {
+            touchListener.longClickConsumed = true
             if (!isSelectionMode) {
-                startSelectionMode(item)
                 onLongClick()
+                startSelectionMode(position)
             }
             true
         }

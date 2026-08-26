@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 import com.mudasir.smartledger.util.DrawerNavigationHelper
+import com.mudasir.smartledger.util.SelectionActionModeHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 
 class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -402,57 +403,48 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         dialog.show()
     }
 
-    private val actionModeCallback = object : ActionMode.Callback {
-        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            mode.menuInflater.inflate(R.menu.contextual_trash_menu, menu)
-            mode.title = "0 Selected"
-            window.statusBarColor = getColor(R.color.teal_dark)
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-            for(i in 0 until menu.size()) menu.getItem(i).icon?.setTint(getColor(R.color.white))
-            return true
-        }
-
-        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
-
-        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            val selected = adapter.getSelectedItems()
-            return when (item.itemId) {
-                R.id.action_select_all -> {
-                    if (adapter.isAllSelected()) {
-                        adapter.deselectAll()
-                        Toast.makeText(this@TrashBinActivity, "Deselected All", Toast.LENGTH_SHORT).show()
-                    } else {
-                        adapter.selectAll()
-                        Toast.makeText(this@TrashBinActivity, "Selected All", Toast.LENGTH_SHORT).show()
+    private val actionModeCallback by lazy {
+        SelectionActionModeHelper.setupActionMode(
+            activity = this,
+            drawerLayout = drawerLayout,
+            menuResId = R.menu.contextual_trash_menu,
+            onActionClicked = { mode, item ->
+                val selected = adapter.getSelectedItems()
+                when (item.itemId) {
+                    R.id.action_select_all -> {
+                        if (adapter.isAllSelected()) {
+                            adapter.deselectAll()
+                            Toast.makeText(this@TrashBinActivity, "Deselected All", Toast.LENGTH_SHORT).show()
+                        } else {
+                            adapter.selectAll()
+                            Toast.makeText(this@TrashBinActivity, "Selected All", Toast.LENGTH_SHORT).show()
+                        }
+                        true
                     }
-                    true
-                }
-                R.id.action_recover_selection -> {
-                    if (selected.isNotEmpty()) {
-                        showRecoverConfirmationDialog(selected, mode)
-                    } else {
-                        Toast.makeText(this@TrashBinActivity, "Select item(s) to recover", Toast.LENGTH_SHORT).show()
+                    R.id.action_recover_selection -> {
+                        if (selected.isNotEmpty()) {
+                            showRecoverConfirmationDialog(selected, mode)
+                        } else {
+                            Toast.makeText(this@TrashBinActivity, "Select item(s) to recover", Toast.LENGTH_SHORT).show()
+                        }
+                        true
                     }
-                    true
-                }
-                R.id.action_delete_selection -> {
-                    if (selected.isNotEmpty()) {
-                        showDeleteConfirmationDialog(selected, mode)
-                    } else {
-                        Toast.makeText(this@TrashBinActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
+                    R.id.action_delete_selection -> {
+                        if (selected.isNotEmpty()) {
+                            showDeleteConfirmationDialog(selected, mode)
+                        } else {
+                            Toast.makeText(this@TrashBinActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
+                        }
+                        true
                     }
-                    true
+                    else -> false
                 }
-                else -> false
+            },
+            onDestroy = {
+                adapter.endSelectionMode()
+                actionMode = null
             }
-        }
-
-        override fun onDestroyActionMode(mode: ActionMode) {
-            adapter.endSelectionMode()
-            actionMode = null
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-            window.statusBarColor = getColor(R.color.teal_main)
-        }
+        )
     }
 
     private fun updateSelectAllIcon() {

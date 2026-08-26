@@ -33,6 +33,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.DrawerNavigationHelper
+import com.mudasir.smartledger.util.SelectionActionModeHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -169,51 +170,41 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
     }
 
     // --- Action Mode ---
-    private val actionModeCallback = object : ActionMode.Callback {
-        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            mode.menuInflater.inflate(R.menu.contextual_menu, menu)
-            mode.title = "0 Selected"
-            window.statusBarColor = getColor(R.color.teal_dark)
-            fabAdd.hide()
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-            for(i in 0 until menu.size()) menu.getItem(i).icon?.setTint(getColor(R.color.white))
-            return true
-        }
-
-        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
-
-        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            return when (item.itemId) {
-                R.id.action_select_all -> {
-                    if (adapter.isAllSelected()) {
-                        adapter.deselectAll()
-                        Toast.makeText(this@ElectricityActivity, "Deselected All", Toast.LENGTH_SHORT).show()
-                    } else {
-                        adapter.selectAll()
-                        Toast.makeText(this@ElectricityActivity, "Selected All", Toast.LENGTH_SHORT).show()
+    private val actionModeCallback by lazy {
+        SelectionActionModeHelper.setupActionMode(
+            activity = this,
+            drawerLayout = drawerLayout,
+            fabAdd = fabAdd,
+            menuResId = R.menu.contextual_menu,
+            onActionClicked = { mode, item ->
+                when (item.itemId) {
+                    R.id.action_select_all -> {
+                        if (adapter.isAllSelected()) {
+                            adapter.deselectAll()
+                            Toast.makeText(this@ElectricityActivity, "Deselected All", Toast.LENGTH_SHORT).show()
+                        } else {
+                            adapter.selectAll()
+                            Toast.makeText(this@ElectricityActivity, "Selected All", Toast.LENGTH_SHORT).show()
+                        }
+                        true
                     }
-                    true
-                }
-                R.id.action_delete_selection -> {
-                    val selected = adapter.getSelectedItems()
-                    if (selected.isNotEmpty()) {
-                        showDeleteConfirmationDialog(selected, mode)
-                    } else {
-                        Toast.makeText(this@ElectricityActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
+                    R.id.action_delete_selection -> {
+                        val selected = adapter.getSelectedItems()
+                        if (selected.isNotEmpty()) {
+                            showDeleteConfirmationDialog(selected, mode)
+                        } else {
+                            Toast.makeText(this@ElectricityActivity, "Select item(s) to delete", Toast.LENGTH_SHORT).show()
+                        }
+                        true
                     }
-                    true
+                    else -> false
                 }
-                else -> false
+            },
+            onDestroy = {
+                adapter.endSelectionMode()
+                actionMode = null
             }
-        }
-
-        override fun onDestroyActionMode(mode: ActionMode) {
-            adapter.endSelectionMode()
-            actionMode = null
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-            window.statusBarColor = getColor(R.color.teal_main)
-            fabAdd.show()
-        }
+        )
     }
 
     private fun showDeleteConfirmationDialog(items: List<Electricity>, mode: ActionMode) {
