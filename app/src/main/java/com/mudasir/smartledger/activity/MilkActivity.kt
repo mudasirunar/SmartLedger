@@ -125,10 +125,12 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 selectAllItem?.icon?.setTint(getColor(R.color.white))
             }
         )
-        recyclerView.adapter = adapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        val rv = findViewById<RecyclerView>(R.id.rvMilk)
+        rv.adapter = adapter
+        rv.layoutManager = LinearLayoutManager(this)
+        rv.alpha = 0f
 
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+        rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0 && fabAdd.isShown) fabAdd.hide()
                 else if (dy < 0 && !fabAdd.isShown && actionMode == null) fabAdd.show()
@@ -244,8 +246,12 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 SortType.LITERS_ASC -> db.milkDao().getAllByLitersAsc()
             }
             flow.collect { list ->
+                val rv = findViewById<RecyclerView>(R.id.rvMilk)
                 adapter.submitList(list) {
-                    findViewById<RecyclerView>(R.id.rvMilk).scrollToPosition(0)
+                    if (rv.alpha == 0f) {
+                        rv.animate().alpha(1f).setDuration(180).start()
+                    }
+                    rv.scrollToPosition(0)
                 }
                 tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
                 supportActionBar?.subtitle = "${list.size} Records"

@@ -132,10 +132,12 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
             }
         )
 
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+        val rv = findViewById<RecyclerView>(R.id.rvElectricity)
+        rv.layoutManager = LinearLayoutManager(this)
+        rv.adapter = adapter
+        rv.alpha = 0f
 
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+        rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0 && fabAdd.isShown) fabAdd.hide()
                 else if (dy < 0 && !fabAdd.isShown && actionMode == null) fabAdd.show()
@@ -160,8 +162,12 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
                 SortType.UNITS_ASC -> db.electricityDao().getAllByUnitsAsc()
             }
             flow.collect { list ->
+                val rv = findViewById<RecyclerView>(R.id.rvElectricity)
                 adapter.submitList(list) {
-                    findViewById<RecyclerView>(R.id.rvElectricity).scrollToPosition(0)
+                    if (rv.alpha == 0f) {
+                        rv.animate().alpha(1f).setDuration(180).start()
+                    }
+                    rv.scrollToPosition(0)
                 }
                 tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
                 supportActionBar?.subtitle = "${list.size} Records"

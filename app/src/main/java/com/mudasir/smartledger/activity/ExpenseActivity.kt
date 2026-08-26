@@ -127,9 +127,11 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             }
         )
 
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+        val rv = findViewById<RecyclerView>(R.id.rvExpenses)
+        rv.layoutManager = LinearLayoutManager(this)
+        rv.adapter = adapter
+        rv.alpha = 0f
+        rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0 && fabAdd.isShown) fabAdd.hide()
                 else if (dy < 0 && !fabAdd.isShown && actionMode == null) fabAdd.show()
@@ -151,8 +153,12 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
                 SortType.AMOUNT_ASC -> db.expenseDao().getAllExpensesByAmountAsc()
             }
             flow.collect { list ->
+                val rv = findViewById<RecyclerView>(R.id.rvExpenses)
                 adapter.submitList(list) {
-                    findViewById<RecyclerView>(R.id.rvExpenses).scrollToPosition(0)
+                    if (rv.alpha == 0f) {
+                        rv.animate().alpha(1f).setDuration(180).start()
+                    }
+                    rv.scrollToPosition(0)
                 }
                 tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
                 supportActionBar?.subtitle = "${list.size} Records"

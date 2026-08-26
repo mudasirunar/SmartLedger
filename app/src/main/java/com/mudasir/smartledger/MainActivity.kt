@@ -238,7 +238,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 db.clearAllTables()
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@MainActivity, "App Reset Successfully", Toast.LENGTH_SHORT).show()
-                    recreate()
                 }
             }
         }
@@ -498,12 +497,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
 
         views.btnConfirm.setOnClickListener {
+            views.dialog.dismiss()
             if (isRestore) {
                 Toast.makeText(this, "Restore complete.", Toast.LENGTH_SHORT).show()
-                recreate()
             } else {
                 Toast.makeText(this, "Backup saved successfully.", Toast.LENGTH_SHORT).show()
-                (it.context as? Activity)?.recreate()
             }
         }
     }
@@ -528,8 +526,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             when {
                 tile.isAddTile -> startActivity(Intent(this, CreateCustomLedgerActivity::class.java))
                 tile.isCustom -> {
-                    val intent = Intent(this, GenericLedgerActivity::class.java)
-                    intent.putExtra("ledger_template", tile.ledgerTemplate)
+                    val intent = Intent(this, GenericLedgerActivity::class.java).apply {
+                        putExtra("ledger_template", tile.ledgerTemplate)
+                        putExtra("ledger_id", tile.ledgerTemplate?.id ?: 0)
+                    }
                     startActivity(intent)
                 }
                 else -> navigateToStaticLedger(tile.id)
@@ -539,6 +539,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         rv.layoutManager = GridLayoutManager(this, 2)
         rv.adapter = dashboardAdapter
         rv.isNestedScrollingEnabled = false
+        rv.alpha = 0f
 
         lifecycleScope.launch {
             db.customLedgerDao().getAllLedgers().collect { customLedgers ->
@@ -553,7 +554,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                 tiles.add(DashboardTile(-1, "Add Ledger", null, "ic_add", false, true))
 
-                dashboardAdapter.submitList(tiles)
+                dashboardAdapter.submitList(tiles) {
+                    if (rv.alpha == 0f) {
+                        rv.animate().alpha(1f).setDuration(180).start()
+                    }
+                }
             }
         }
     }

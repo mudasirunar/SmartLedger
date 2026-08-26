@@ -172,8 +172,12 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                 }
 
                 flow.collect { list ->
+                    val rv = findViewById<RecyclerView>(R.id.rvGenericRecords)
                     dailyAdapter.submitList(list) {
-                        findViewById<RecyclerView>(R.id.rvGenericRecords).scrollToPosition(0)
+                        if (rv.alpha == 0f) {
+                            rv.animate().alpha(1f).setDuration(180).start()
+                        }
+                        rv.scrollToPosition(0)
                     }
                     findViewById<View>(R.id.tvEmpty).visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
                     supportActionBar?.subtitle = "${list.size} Records"
@@ -187,8 +191,12 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                 }
 
                 flow.collect { list ->
+                    val rv = findViewById<RecyclerView>(R.id.rvGenericRecords)
                     adapter.submitList(list) {
-                        findViewById<RecyclerView>(R.id.rvGenericRecords).scrollToPosition(0)
+                        if (rv.alpha == 0f) {
+                            rv.animate().alpha(1f).setDuration(180).start()
+                        }
+                        rv.scrollToPosition(0)
                     }
                     findViewById<View>(R.id.tvEmpty).visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
                     supportActionBar?.subtitle = "${list.size} Records"
@@ -256,6 +264,8 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
             )
             rv.adapter = adapter
         }
+
+        rv.alpha = 0f
 
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
