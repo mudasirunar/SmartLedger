@@ -1,4 +1,3 @@
-import com.android.build.api.dsl.SigningConfig
 import java.util.Properties
 
 plugins {
@@ -15,8 +14,8 @@ android {
         applicationId = "com.mudasir.smartledger"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 5
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
