@@ -100,8 +100,12 @@ object DrawerNavigationHelper {
                         }
                         R.id.nav_calculator -> {
                             activity.startActivity(Intent(activity, CalculatorActivity::class.java))
+                            val navView = drawerLayout.findViewById<NavigationView>(R.id.navigationView)
+                            if (navView != null) restoreCurrentScreenSelection(activity, navView, currentCustomLedgerId?.toInt())
                         }
                         R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
+                            val navView = drawerLayout.findViewById<NavigationView>(R.id.navigationView)
+                            if (navView != null) restoreCurrentScreenSelection(activity, navView, currentCustomLedgerId?.toInt())
                             if (activity !is MainActivity) {
                                 val intent = Intent(activity, MainActivity::class.java)
                                 intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -115,6 +119,24 @@ object DrawerNavigationHelper {
             }
         }, 250)
         return true
+    }
+
+    fun restoreCurrentScreenSelection(
+        activity: AppCompatActivity,
+        navigationView: NavigationView,
+        currentCustomLedgerId: Int? = null
+    ) {
+        val targetId = when (activity) {
+            is MainActivity -> R.id.nav_dashboard
+            is ElectricityActivity -> R.id.nav_electricity
+            is MilkActivity -> R.id.nav_milk
+            is ExpenseActivity -> R.id.nav_expenses
+            is AnalyticsActivity -> R.id.nav_analytics
+            is TrashBinActivity -> R.id.nav_trash
+            is GenericLedgerActivity -> if (currentCustomLedgerId != null) currentCustomLedgerId + 1000 else null
+            else -> null
+        }
+        targetId?.let { navigationView.setCheckedItem(it) }
     }
 
     private fun navigateToSection(activity: AppCompatActivity, targetClass: Class<*>) {

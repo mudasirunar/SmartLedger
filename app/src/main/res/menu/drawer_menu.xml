@@ -26,30 +26,36 @@
 
     <item android:title="Tools" android:orderInCategory="900">
         <menu>
-            <group android:id="@+id/group_tools_items" android:checkableBehavior="single">
+            <group android:id="@+id/group_tools_items">
                 <item
                     android:id="@+id/nav_analytics"
                     android:icon="@drawable/ic_pie_chart"
+                    android:checkable="true"
                     android:title="Analytics" />
                 <item
                     android:id="@+id/nav_calculator"
                     android:icon="@drawable/ic_calculate"
+                    android:checkable="false"
                     android:title="Calculator" />
                 <item
                     android:id="@+id/nav_trash"
                     android:icon="@drawable/ic_delete"
+                    android:checkable="true"
                     android:title="Trash Bin" />
                 <item
                     android:id="@+id/nav_backup"
                     android:icon="@drawable/ic_save"
+                    android:checkable="false"
                     android:title="Backup Data" />
                 <item
                     android:id="@+id/nav_restore"
                     android:icon="@drawable/ic_refresh"
+                    android:checkable="false"
                     android:title="Restore Data" />
                 <item
                     android:id="@+id/nav_wipe_data"
                     android:icon="@drawable/ic_delete"
+                    android:checkable="false"
                     android:title="Reset App" />
             </group>
         </menu>

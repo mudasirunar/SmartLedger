@@ -615,6 +615,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onResume() {
         super.onResume()
         DrawerNavigationHelper.updateHeaderLastBackup(this, navigationView)
-        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_dashboard)
+        DrawerNavigationHelper.restoreCurrentScreenSelection(this, navigationView)
     }
 }
