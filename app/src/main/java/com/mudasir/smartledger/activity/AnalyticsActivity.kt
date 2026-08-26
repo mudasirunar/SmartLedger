@@ -39,6 +39,8 @@ import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.github.mikephil.charting.model.GradientColor
 import com.github.mikephil.charting.utils.ColorTemplate
 import com.google.android.material.appbar.MaterialToolbar
@@ -690,13 +692,14 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     private fun setupMilkCharts(records: List<MilkRecord>) {
         if (records.isEmpty()) return
 
+        val displayRecords = records.sortedWith(compareByDescending<MilkRecord> { it.year }.thenByDescending { it.monthIndex })
         val entriesLitres = ArrayList<BarEntry>()
         val entriesCost = ArrayList<BarEntry>()
         val labels = ArrayList<String>()
         var maxLitres = 0f
         var maxCost = 0f
 
-        records.forEachIndexed { index, record ->
+        displayRecords.forEachIndexed { index, record ->
             val liters = record.totalLiters.toFloat()
             val cost = record.totalAmount.toFloat()
             entriesLitres.add(BarEntry(index.toFloat(), liters))
@@ -721,6 +724,22 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             maxCost * 1.2f, "Cost", isDecimal = false,
             gradientColors = getTrafficLightGradients(entriesCost)
         )
+
+        val milkBarListener = object : OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                if (e == null) return
+                val idx = e.x.toInt()
+                if (idx in displayRecords.indices) {
+                    val clickedRecord = displayRecords[idx]
+                    val intent = Intent(this@AnalyticsActivity, ViewMilkActivity::class.java)
+                    intent.putExtra("milk_data", clickedRecord)
+                    startActivity(intent)
+                }
+            }
+            override fun onNothingSelected() {}
+        }
+        barChartMilkLitres.setOnChartValueSelectedListener(milkBarListener)
+        barChartMilkCost.setOnChartValueSelectedListener(milkBarListener)
     }
     private fun setupMilkYoYChart(records: List<MilkRecord>) {
         if (records.isEmpty()) {
@@ -743,7 +762,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         val labels = ArrayList<String>()
         val calendar = Calendar.getInstance()
 
-        for (i in -11..0) {
+        for (i in 0 downTo -11) {
             var targetMonth = latestMonthIndex + i
             var targetYear = latestYear
 
@@ -756,7 +775,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             val prevKey = (targetYear - 1) * 100 + targetMonth
             val valCurr = dataMap[currKey] ?: 0f
             val valPrev = dataMap[prevKey] ?: 0f
-            val xIndex = (i + 11).toFloat()
+            val xIndex = (-i).toFloat()
 
             entriesCurr.add(BarEntry(xIndex, valCurr, targetYear.toString()))
             entriesPrev.add(BarEntry(xIndex, valPrev, (targetYear - 1).toString()))
@@ -804,8 +823,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         xAxis.granularity = 1f
         xAxis.setDrawGridLines(false)
         xAxis.textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
-        xAxis.axisMinimum = 0f
-        xAxis.axisMaximum = 12f
+        xAxis.axisMinimum = -0.5f
+        xAxis.axisMaximum = 12.5f
 
         barChartMilkYoY.axisRight.isEnabled = false
         barChartMilkYoY.axisLeft.textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
@@ -815,7 +834,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
         barChartMilkYoY.groupBars(0f, groupSpace, barSpace)
         barChartMilkYoY.setVisibleXRangeMaximum(6f)
-        barChartMilkYoY.moveViewToX(12f)
+        barChartMilkYoY.moveViewToX(-0.5f)
         barChartMilkYoY.invalidate()
     }
 
@@ -843,7 +862,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         val labels = ArrayList<String>()
         val sdfMonth = SimpleDateFormat("MMM", Locale.getDefault())
 
-        for (i in -11..0) {
+        for (i in 0 downTo -11) {
             calendar.timeInMillis = latestRecordTime
             calendar.add(Calendar.MONTH, i)
             val currYear = calendar.get(Calendar.YEAR)
@@ -852,7 +871,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             val prevKey = (currYear - 1) * 100 + currMonth
             val valCurr = dataMap[currKey] ?: 0f
             val valPrev = dataMap[prevKey] ?: 0f
-            val xIndex = (i + 11).toFloat()
+            val xIndex = (-i).toFloat()
 
             entriesCurr.add(BarEntry(xIndex, valCurr, currYear.toString()))
             entriesPrev.add(BarEntry(xIndex, valPrev, (currYear - 1).toString()))
@@ -899,8 +918,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         xAxis.granularity = 1f
         xAxis.setDrawGridLines(false)
         xAxis.textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
-        xAxis.axisMinimum = 0f
-        xAxis.axisMaximum = 12f
+        xAxis.axisMinimum = -0.5f
+        xAxis.axisMaximum = 12.5f
 
         barChartYoY.axisRight.isEnabled = false
         barChartYoY.axisLeft.textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
@@ -910,13 +929,14 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
         barChartYoY.groupBars(0f, groupSpace, barSpace)
         barChartYoY.setVisibleXRangeMaximum(6f)
-        barChartYoY.moveViewToX(12f)
+        barChartYoY.moveViewToX(-0.5f)
         barChartYoY.invalidate()
     }
 
     private fun setupElectricityCharts(records: List<Electricity>) {
         if (records.isEmpty()) return
 
+        val displayRecords = records.sortedByDescending { it.endDate }
         val entriesUnits = ArrayList<BarEntry>()
         val entriesCost = ArrayList<BarEntry>()
         val labels = ArrayList<String>()
@@ -924,7 +944,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         var maxUnits = 0f
         var maxCost = 0f
 
-        records.forEachIndexed { index, record ->
+        displayRecords.forEachIndexed { index, record ->
             val units = (record.totalUnits ?: 0.0).toFloat()
             val cost = (record.amount ?: 0.0).toFloat()
             entriesUnits.add(BarEntry(index.toFloat(), units))
@@ -945,6 +965,22 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             maxCost * 1.2f, "Cost",
             gradientColors = getTrafficLightGradients(entriesCost)
         )
+
+        val elecBarListener = object : OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                if (e == null) return
+                val idx = e.x.toInt()
+                if (idx in displayRecords.indices) {
+                    val clickedRecord = displayRecords[idx]
+                    val intent = Intent(this@AnalyticsActivity, ViewElectricityActivity::class.java)
+                    intent.putExtra("electricity_data", clickedRecord)
+                    startActivity(intent)
+                }
+            }
+            override fun onNothingSelected() {}
+        }
+        barChartUnits.setOnChartValueSelectedListener(elecBarListener)
+        barChartCost.setOnChartValueSelectedListener(elecBarListener)
     }
 
     // ================== EXPENSE CHARTS ==================
@@ -955,16 +991,21 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             return
         }
 
-        // Monthly Bar Chart
+        // Monthly Bar Chart (Newest -> Oldest)
+        val sortedRecords = records.sortedByDescending { it.date }
         val monthlyMap = LinkedHashMap<String, Float>()
+        val monthExpensesMap = LinkedHashMap<String, ArrayList<Expense>>()
         val sdfMonth = SimpleDateFormat("MMM ''yy", Locale.getDefault())
-        records.forEach {
-            val key = sdfMonth.format(Date(it.date))
-            monthlyMap[key] = (monthlyMap[key] ?: 0f) + it.amount.toFloat()
+        sortedRecords.forEach { expense ->
+            val key = sdfMonth.format(Date(expense.date))
+            monthlyMap[key] = (monthlyMap[key] ?: 0f) + expense.amount.toFloat()
+            val list = monthExpensesMap.getOrPut(key) { ArrayList() }
+            list.add(expense)
         }
 
         val entriesMonth = ArrayList<BarEntry>()
         val labelsMonth = ArrayList<String>()
+        val monthExpensesList = monthExpensesMap.values.toList()
         var index = 0f
         monthlyMap.forEach { (month, amount) ->
             entriesMonth.add(BarEntry(index, amount))
@@ -977,6 +1018,23 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             "Monthly", isDecimal = false,
             gradientColors = getTrafficLightGradients(entriesMonth)
         )
+
+        val expenseBarListener = object : OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                if (e == null) return
+                val idx = e.x.toInt()
+                if (idx in monthExpensesList.indices) {
+                    val clickedExpense = monthExpensesList[idx].firstOrNull()
+                    if (clickedExpense != null) {
+                        val intent = Intent(this@AnalyticsActivity, ViewExpenseActivity::class.java)
+                        intent.putExtra("expense_data", clickedExpense)
+                        startActivity(intent)
+                    }
+                }
+            }
+            override fun onNothingSelected() {}
+        }
+        barChartExpenseMonthly.setOnChartValueSelectedListener(expenseBarListener)
 
         // Category Pie Chart
         val categoryMap = HashMap<String, Float>()
@@ -1093,7 +1151,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         chart.xAxis.textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
         chart.xAxis.setDrawGridLines(false)
-        chart.xAxis.granularity = 1f
+        chart.xAxis.axisMinimum = -0.5f
+        if (labels.isNotEmpty()) chart.xAxis.axisMaximum = labels.size.toFloat() - 0.5f
 
         chart.axisRight.isEnabled = false
         chart.axisLeft.textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
@@ -1102,7 +1161,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         else chart.axisLeft.resetAxisMaximum()
 
         chart.setVisibleXRangeMaximum(6f)
-        chart.moveViewToX(entries.size.toFloat())
+        chart.moveViewToX(-0.5f)
         chart.extraBottomOffset = 10f
         chart.invalidate()
     }
