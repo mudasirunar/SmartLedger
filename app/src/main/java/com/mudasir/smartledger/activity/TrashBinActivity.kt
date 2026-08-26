@@ -36,6 +36,8 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
+import com.mudasir.smartledger.util.DrawerNavigationHelper
+
 class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private lateinit var drawerLayout: DrawerLayout
@@ -43,6 +45,8 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
     private lateinit var tvEmpty: View
     private lateinit var gestureDetector: GestureDetector
     private val db by lazy { AppDatabase.getDatabase(this) }
+
+    // Selection variables
     private var actionMode: ActionMode? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,7 +57,6 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         setupWindowInsets()
         setupUI()
         setupGestures()
-        observeCustomLedgers()
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -105,6 +108,7 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
 
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
         navigationView.setNavigationItemSelectedListener(this)
+        DrawerNavigationHelper.observeCustomLedgers(this, navigationView)
 
         val recyclerView = findViewById<RecyclerView>(R.id.rvTrash)
 
@@ -478,67 +482,7 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
 
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        drawerLayout.closeDrawer(GravityCompat.START)
-        val id = item.itemId
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            lifecycleScope.launch {
-                val customLedgers = withContext(Dispatchers.IO) { db.customLedgerDao().getAllLedgersList() }
-                val clickedLedger = customLedgers.find { (it.id + 1000) == id }
-
-                if (clickedLedger != null) {
-                    val intent = Intent(this@TrashBinActivity, GenericLedgerActivity::class.java)
-                    intent.putExtra("ledger_template", clickedLedger)
-                    startActivity(intent)
-                    finish()
-                } else {
-                    when (id) {
-                        R.id.nav_dashboard -> {
-                            val intent = Intent(this@TrashBinActivity, MainActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            startActivity(intent)
-                            finish()
-                        }
-                        R.id.nav_electricity -> {
-                            val intent = Intent(this@TrashBinActivity, ElectricityActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
-                        }
-                        R.id.nav_milk -> {
-                            val intent = Intent(this@TrashBinActivity, MilkActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
-                        }
-                        R.id.nav_expenses -> {
-                            val intent = Intent(this@TrashBinActivity, ExpenseActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
-                        }
-                        R.id.nav_analytics -> {
-                            val intent = Intent(this@TrashBinActivity, AnalyticsActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                            startActivity(intent)
-                            finish()
-                        }
-                        R.id.nav_trash -> { /* Already here */ }
-                        R.id.nav_calculator -> {
-                            startActivity(Intent(this@TrashBinActivity, CalculatorActivity::class.java))
-                        }
-                        R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
-                            val intent = Intent(this@TrashBinActivity, MainActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            startActivity(intent)
-                            finish()
-                            Toast.makeText(this@TrashBinActivity, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            }
-        }, 250)
-        return true
+        return DrawerNavigationHelper.handleNavigation(this, drawerLayout, item)
     }
 
     private fun setupGestures() {
@@ -566,49 +510,8 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
 
     override fun onResume() {
         super.onResume()
-        setupHeader()
-        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_trash)
-    }
-
-    private fun setupHeader() {
         val navView = findViewById<NavigationView>(R.id.navigationView)
-        val headerView = navView.getHeaderView(0)
-        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
-
-        val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
-        tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
-    }
-    private fun observeCustomLedgers() {
-        lifecycleScope.launch {
-            db.customLedgerDao().getAllLedgers().collect { ledgers ->
-                val navigationView = findViewById<NavigationView>(R.id.navigationView)
-                val menu = navigationView.menu
-                val staticIds = setOf(R.id.nav_dashboard, R.id.nav_electricity, R.id.nav_milk, R.id.nav_expenses)
-                val toRemove = mutableListOf<Int>()
-
-                for (i in 0 until menu.size()) {
-                    val item = menu.getItem(i)
-                    if (item.groupId == R.id.group_main && !staticIds.contains(item.itemId)) {
-                        toRemove.add(item.itemId)
-                    }
-                }
-                toRemove.forEach { menu.removeItem(it) }
-
-                ledgers.forEachIndexed { index, ledger ->
-                    val iconResId = resources.getIdentifier(ledger.iconName, "drawable", packageName)
-
-                    val menuItem = menu.add(
-                        R.id.group_main,
-                        ledger.id + 1000,
-                        10 + index,
-                        ledger.name
-                    )
-
-                    menuItem.setIcon(if (iconResId != 0) iconResId else R.drawable.ic_star)
-                    menuItem.setCheckable(true)
-                    menuItem.icon?.setTint(androidx.core.content.ContextCompat.getColor(this@TrashBinActivity, R.color.teal_main))
-                }
-            }
-        }
+        DrawerNavigationHelper.updateHeaderLastBackup(this, navView)
+        navView.setCheckedItem(R.id.nav_trash)
     }
 }

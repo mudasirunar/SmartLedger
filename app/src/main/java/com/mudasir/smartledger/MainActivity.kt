@@ -54,6 +54,7 @@ import kotlin.math.abs
 
 
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.mudasir.smartledger.util.DrawerNavigationHelper
 
 private const val PREFS_NAME = "SmartLedgerPrefs"
 private const val KEY_LAST_BACKUP = "last_backup"
@@ -114,7 +115,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupGestures()
         startClock()
         setupHeader()
-        observeCustomLedgers()
+        DrawerNavigationHelper.observeCustomLedgers(this, navigationView)
 
         val fabAnalytics = findViewById<ExtendedFloatingActionButton>(R.id.btnAnalytics)
 
@@ -159,43 +160,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        val id = item.itemId
-        drawerLayout.closeDrawer(GravityCompat.START)
-
-        val isAction = id == R.id.nav_backup || id == R.id.nav_restore || id == R.id.nav_wipe_data
-        if (isAction) {
-            handleActionItems(id)
-            return false
+        return DrawerNavigationHelper.handleNavigation(this, drawerLayout, item) { id ->
+            if (id == R.id.nav_backup || id == R.id.nav_restore || id == R.id.nav_wipe_data) {
+                handleActionItems(id)
+                true
+            } else false
         }
-
-        handler.postDelayed({
-            lifecycleScope.launch {
-                val customLedgers = withContext(Dispatchers.IO) { db.customLedgerDao().getAllLedgersList() }
-                val clickedLedger = customLedgers.find { (it.id + 1000) == id }
-
-                if (clickedLedger != null) {
-                    val intent = Intent(this@MainActivity, GenericLedgerActivity::class.java)
-                    intent.putExtra("ledger_template", clickedLedger)
-                    startActivity(intent)
-                } else {
-                    val intent = when (id) {
-                        R.id.nav_electricity -> Intent(this@MainActivity, ElectricityActivity::class.java)
-                        R.id.nav_milk -> Intent(this@MainActivity, MilkActivity::class.java)
-                        R.id.nav_expenses -> Intent(this@MainActivity, ExpenseActivity::class.java)
-                        R.id.nav_calculator -> Intent(this@MainActivity, CalculatorActivity::class.java)
-                        R.id.nav_trash -> Intent(this@MainActivity, TrashBinActivity::class.java)
-                        R.id.nav_analytics -> Intent(this@MainActivity, AnalyticsActivity::class.java)
-                        else -> null
-                    }
-                    intent?.let {
-                        it.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                        startActivity(it)
-                    }
-                }
-            }
-        }, 250)
-
-        return id != R.id.nav_dashboard
     }
 
     private fun handleActionItems(id: Int) {
@@ -632,39 +602,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    private fun observeCustomLedgers() {
-        lifecycleScope.launch {
-            db.customLedgerDao().getAllLedgers().collect { ledgers ->
-                val menu = navigationView.menu
-                val staticIds = setOf(R.id.nav_dashboard, R.id.nav_electricity, R.id.nav_milk, R.id.nav_expenses)
-                val toRemove = mutableListOf<Int>()
 
-                for (i in 0 until menu.size()) {
-                    val item = menu.getItem(i)
-                    if (item.groupId == R.id.group_main && !staticIds.contains(item.itemId)) {
-                        toRemove.add(item.itemId)
-                    }
-                }
-
-                toRemove.forEach { menu.removeItem(it) }
-
-                ledgers.forEachIndexed { index, ledger ->
-                    val iconResId = resources.getIdentifier(ledger.iconName, "drawable", packageName)
-
-                    val menuItem = menu.add(
-                        R.id.group_main,
-                        ledger.id + 1000,
-                        10 + index,
-                        ledger.name
-                    )
-
-                    menuItem.setIcon(if (iconResId != 0) iconResId else R.drawable.ic_star)
-                    menuItem.setCheckable(true)
-                    menuItem.icon?.setTint(ContextCompat.getColor(this@MainActivity, R.color.teal_main))
-                }
-            }
-        }
-    }
 
     private fun navigateToStaticLedger(id: Int) {
         val intent = when (id) {
@@ -678,7 +616,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onResume() {
         super.onResume()
-        setupHeader()
+        DrawerNavigationHelper.updateHeaderLastBackup(this, navigationView)
         findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_dashboard)
     }
 }

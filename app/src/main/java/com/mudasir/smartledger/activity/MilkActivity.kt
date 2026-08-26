@@ -33,6 +33,7 @@ import com.mudasir.smartledger.util.AiHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+import com.mudasir.smartledger.util.DrawerNavigationHelper
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +64,7 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupWindowInsets()
         setupUI()
         setupGestures()
-        observeCustomLedgers()
+        DrawerNavigationHelper.observeCustomLedgers(this, findViewById(R.id.navigationView))
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -418,68 +419,7 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        drawerLayout.closeDrawer(GravityCompat.START)
-
-        val id = item.itemId
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            lifecycleScope.launch {
-                val customLedgers = withContext(Dispatchers.IO) { db.customLedgerDao().getAllLedgersList() }
-                val clickedLedger = customLedgers.find { (it.id + 1000) == id }
-
-                if (clickedLedger != null) {
-                    val intent = Intent(this@MilkActivity, GenericLedgerActivity::class.java)
-                    intent.putExtra("ledger_template", clickedLedger)
-                    startActivity(intent)
-                    finish()
-                } else {
-                    when (id) {
-                        R.id.nav_dashboard -> {
-                            val intent = Intent(this@MilkActivity, MainActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            startActivity(intent)
-                            finish()
-                        }
-                        R.id.nav_electricity -> {
-                            val mainIntent = Intent(this@MilkActivity, MainActivity::class.java)
-                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            val targetIntent = Intent(this@MilkActivity, ElectricityActivity::class.java)
-                            startActivities(arrayOf(mainIntent, targetIntent))
-                        }
-                        R.id.nav_milk -> {/* Already Here*/}
-                        R.id.nav_expenses -> {
-                            val mainIntent = Intent(this@MilkActivity, MainActivity::class.java)
-                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            val targetIntent = Intent(this@MilkActivity, ExpenseActivity::class.java)
-                            startActivities(arrayOf(mainIntent, targetIntent))
-                        }
-                        R.id.nav_analytics -> {
-                            val mainIntent = Intent(this@MilkActivity, MainActivity::class.java)
-                            mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            val targetIntent = Intent(this@MilkActivity, AnalyticsActivity::class.java)
-                            startActivities(arrayOf(mainIntent, targetIntent))
-                        }
-                        R.id.nav_trash -> {
-                            val intent = Intent(this@MilkActivity, TrashBinActivity::class.java)
-                            startActivity(intent)
-                            finish()
-                        }
-                        R.id.nav_calculator -> {
-                            val intent = Intent(this@MilkActivity, CalculatorActivity::class.java)
-                            startActivity(intent)
-                        }
-                        R.id.nav_backup, R.id.nav_restore, R.id.nav_wipe_data -> {
-                            val intent = Intent(this@MilkActivity, MainActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            startActivity(intent)
-                            finish()
-                            Toast.makeText(this@MilkActivity, "Manage these settings from Dashboard", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            }
-        }, 250)
-        return true
+        return DrawerNavigationHelper.handleNavigation(this, drawerLayout, item)
     }
 
     private fun setupGestures() {
@@ -507,51 +447,8 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onResume() {
         super.onResume()
-        setupHeader()
-        findViewById<NavigationView>(R.id.navigationView).setCheckedItem(R.id.nav_milk)
-    }
-
-    private fun setupHeader() {
         val navView = findViewById<NavigationView>(R.id.navigationView)
-        val headerView = navView.getHeaderView(0)
-        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
-
-        val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
-        tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
-    }
-
-    private fun observeCustomLedgers() {
-        lifecycleScope.launch {
-            db.customLedgerDao().getAllLedgers().collect { ledgers ->
-                val navigationView = findViewById<NavigationView>(R.id.navigationView)
-                val menu = navigationView.menu
-                val staticIds = setOf(R.id.nav_dashboard, R.id.nav_electricity, R.id.nav_milk, R.id.nav_expenses)
-                val toRemove = mutableListOf<Int>()
-
-                for (i in 0 until menu.size()) {
-                    val item = menu.getItem(i)
-                    if (item.groupId == R.id.group_main && !staticIds.contains(item.itemId)) {
-                        toRemove.add(item.itemId)
-                    }
-                }
-
-                toRemove.forEach { menu.removeItem(it) }
-
-                ledgers.forEachIndexed { index, ledger ->
-                    val iconResId = resources.getIdentifier(ledger.iconName, "drawable", packageName)
-
-                    val menuItem = menu.add(
-                        R.id.group_main,
-                        ledger.id + 1000,
-                        10 + index,
-                        ledger.name
-                    )
-
-                    menuItem.setIcon(if (iconResId != 0) iconResId else R.drawable.ic_star)
-                    menuItem.setCheckable(true)
-                    menuItem.icon?.setTint(androidx.core.content.ContextCompat.getColor(this@MilkActivity, R.color.teal_main))
-                }
-            }
-        }
+        DrawerNavigationHelper.updateHeaderLastBackup(this, navView)
+        navView.setCheckedItem(R.id.nav_milk)
     }
 }
