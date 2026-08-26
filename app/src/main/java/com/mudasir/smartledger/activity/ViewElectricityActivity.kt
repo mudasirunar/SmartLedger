@@ -35,8 +35,15 @@ class ViewElectricityActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK) {
             val message = result.data?.getStringExtra("toast_message") ?: "Record Updated"
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-
-            finish()
+            record?.id?.let { id ->
+                lifecycleScope.launch {
+                    val updated = withContext(Dispatchers.IO) { db.electricityDao().getById(id) }
+                    if (updated != null) {
+                        record = updated
+                        setupUI()
+                    }
+                }
+            }
         }
     }
 

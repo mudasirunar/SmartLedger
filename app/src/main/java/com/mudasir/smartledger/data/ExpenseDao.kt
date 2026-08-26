@@ -46,7 +46,9 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses")
     suspend fun getAllRaw(): List<Expense>
 
-    // --- EXISTING CRUD ---
+    @Query("SELECT * FROM expenses WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Int): Expense?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExpense(expense: Expense)
 

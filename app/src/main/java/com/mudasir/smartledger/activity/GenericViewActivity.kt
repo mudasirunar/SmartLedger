@@ -46,7 +46,17 @@ class GenericViewActivity : AppCompatActivity() {
 
     private val editLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            finish()
+            val message = result.data?.getStringExtra("toast_message") ?: "Record Updated"
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            entry?.id?.let { id ->
+                lifecycleScope.launch {
+                    val updated = withContext(Dispatchers.IO) { db.customLedgerDao().getEntryById(id) }
+                    if (updated != null) {
+                        entry = updated
+                        displayRecordDetails()
+                    }
+                }
+            }
         }
     }
 

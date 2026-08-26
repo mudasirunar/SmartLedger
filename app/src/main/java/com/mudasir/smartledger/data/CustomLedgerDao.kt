@@ -112,7 +112,9 @@ interface CustomLedgerDao {
     fun getEntriesByAmountAsc(lId: Int): Flow<List<CustomEntry>>
 
 
-    // --- TRASH QUERIES ---
+    @Query("SELECT * FROM custom_entries WHERE id = :id LIMIT 1")
+    suspend fun getEntryById(id: Long): CustomEntry?
+
     @Query("SELECT * FROM custom_entries WHERE isDeleted = 1")
     fun getAllTrashEntries(): Flow<List<CustomEntry>>
 
