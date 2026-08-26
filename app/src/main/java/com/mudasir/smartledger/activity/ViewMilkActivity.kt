@@ -20,7 +20,9 @@ import com.mudasir.smartledger.R
 import com.mudasir.smartledger.adapter.MilkDailyAdapter
 import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.MilkRecord
+import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.MilkNotificationConstants
+import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,18 +43,7 @@ class ViewMilkActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_view_milk)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
-
-            v.setPadding(
-                systemBars.left,
-                systemBars.top,
-                systemBars.right,
-                maxOf(systemBars.bottom, imeInsets.bottom)
-            )
-            insets
-        }
+        findViewById<View>(R.id.main).applySystemBarPadding(includeIme = true)
 
         record = intent.getSerializableExtra("milk_data") as? MilkRecord
         if (record == null) { finish(); return }
@@ -96,41 +87,28 @@ class ViewMilkActivity : AppCompatActivity() {
     }
 
     private fun showDeleteDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setView(dialogView)
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        DialogHelper.createConfirmationDialog(
+            context = this,
+            title = "Delete Record?",
+            message = "Move this month's record to Trash?"
+        ) { views ->
+            views.btnConfirm.text = "Delete"
+            views.details.visibility = View.VISIBLE
+            views.detailTitle.text = record!!.monthName
+            views.detailAmount.text = "Rs ${record!!.totalAmount.toInt()}"
 
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
-
-        tvTitle.text = "Delete Record?"
-        tvMessage.text = "Move this month's record to Trash?"
-        btnConfirm.text = "Delete"
-
-        containerDetails.visibility = View.VISIBLE
-        tvDetailTitle.text = record!!.monthName
-        tvDetailAmount.text = "Rs ${record!!.totalAmount.toInt()}"
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    db.milkDao().softDelete(listOf(record!!.id), System.currentTimeMillis())
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        db.milkDao().softDelete(listOf(record!!.id), System.currentTimeMillis())
+                    }
+                    Toast.makeText(this@ViewMilkActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
+                    finish()
                 }
-                Toast.makeText(this@ViewMilkActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
-                finish()
             }
-        }
-        dialog.show()
+        }.show()
     }
 
     private fun updateSummaryUI() {

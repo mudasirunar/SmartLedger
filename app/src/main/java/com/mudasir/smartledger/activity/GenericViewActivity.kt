@@ -19,11 +19,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.mudasir.smartledger.R
+import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.CustomEntry
 import com.mudasir.smartledger.data.CustomLedger
-import kotlin.getValue
-import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.DateMode
+import com.mudasir.smartledger.util.DialogHelper
+import com.mudasir.smartledger.util.PhotoGridHelper
+import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -66,17 +68,31 @@ class GenericViewActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_generic_view)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        findViewById<View>(R.id.main).applySystemBarPadding(includeIme = true)
+
+        entry = intent.getSerializableExtraCompat<CustomEntry>("entry_data")
+        ledger = intent.getSerializableExtraCompat<CustomLedger>("ledger_template")
+
+        if (entry == null) {
+            finish()
+            return
         }
 
-        entry = intent.getSerializableExtra("entry_data") as? CustomEntry
-        ledger = intent.getSerializableExtra("ledger_template") as? CustomLedger
-
-        if (entry == null || ledger == null) {
-            finish()
+        if (ledger == null) {
+            val lId = intent.getIntExtra("ledger_id", entry?.ledgerId ?: 0)
+            if (lId != 0) {
+                lifecycleScope.launch {
+                    ledger = withContext(Dispatchers.IO) { db.customLedgerDao().getLedgerById(lId) }
+                    if (ledger == null) {
+                        finish()
+                    } else {
+                        initUI()
+                        displayRecordDetails()
+                    }
+                }
+            } else {
+                finish()
+            }
             return
         }
 
@@ -99,9 +115,11 @@ class GenericViewActivity : AppCompatActivity() {
         tvPhotoLabel = findViewById(R.id.tvPhotoLabel)
 
         findViewById<Button>(R.id.btnEdit).setOnClickListener {
-            val intent = Intent(this, GenericAddEditActivity::class.java)
-            intent.putExtra("ledger_template", ledger)
-            intent.putExtra("existing_entry", entry)
+            val intent = Intent(this, GenericAddEditActivity::class.java).apply {
+                putExtra("ledger_template", ledger)
+                putExtra("ledger_id", ledger?.id ?: 0)
+                putExtra("existing_entry", entry)
+            }
             editLauncher.launch(intent)
         }
     }
@@ -140,21 +158,12 @@ class GenericViewActivity : AppCompatActivity() {
             addStyledDetail(field.fieldName, value)
         }
 
-        val images = entry?.imagePaths ?: emptyList()
-        if (images.isEmpty()) {
-            tvPhotoLabel.visibility = View.GONE
-            rvPhotos.visibility = View.GONE
-        } else {
-            tvPhotoLabel.visibility = View.VISIBLE
-            rvPhotos.visibility = View.VISIBLE
-            rvPhotos.layoutManager = GridLayoutManager(this, 2)
-            rvPhotos.adapter = com.mudasir.smartledger.adapter.PhotoViewAdapter(images) { path ->
-                val intent = Intent(this, ImageViewerActivity::class.java)
-                intent.putStringArrayListExtra("image_paths", ArrayList(images))
-                intent.putExtra("position", images.indexOf(path))
-                startActivity(intent)
-            }
-        }
+        PhotoGridHelper.setupPhotoGrid(
+            context = this,
+            recyclerView = rvPhotos,
+            headerView = tvPhotoLabel,
+            images = entry?.imagePaths ?: emptyList()
+        )
     }
 
     private fun createDateColumn(label: String, value: String): View {
@@ -190,11 +199,6 @@ class GenericViewActivity : AppCompatActivity() {
     }
 
     private fun showDeleteDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this).setView(dialogView)
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
         val type = object : TypeToken<Map<String, String>>() {}.type
         val dataMap: Map<String, String>? = try {
             Gson().fromJson(entry!!.dataJson, type)
@@ -203,26 +207,38 @@ class GenericViewActivity : AppCompatActivity() {
         val firstFieldValue = dataMap?.values?.firstOrNull()
         val displayTitle = if (!firstFieldValue.isNullOrBlank()) firstFieldValue else ledger?.name ?: "Record"
 
-        dialogView.findViewById<TextView>(R.id.tvDialogTitle).text = "Delete Record?"
-        dialogView.findViewById<TextView>(R.id.tvDialogMessage).text = "Move this to Trash?"
-        dialogView.findViewById<View>(R.id.containerDetails).visibility = View.VISIBLE
+        DialogHelper.createConfirmationDialog(
+            context = this,
+            title = "Delete Record?",
+            message = "Move this to Trash?"
+        ) { views ->
+            views.btnConfirm.text = "Delete"
+            views.details.visibility = View.VISIBLE
+            views.detailTitle.text = displayTitle
+            views.detailAmount.text = "Rs ${entry!!.amount ?: 0.0}"
 
-        dialogView.findViewById<TextView>(R.id.tvDetailTitle).text = displayTitle
-        dialogView.findViewById<TextView>(R.id.tvDetailAmount).text = "Rs ${entry!!.amount ?: 0.0}"
-
-        dialogView.findViewById<View>(R.id.btnDialogCancel).setOnClickListener { dialog.dismiss() }
-        dialogView.findViewById<View>(R.id.btnDialogConfirm).setOnClickListener {
-            dialog.dismiss()
-            lifecycleScope.launch(Dispatchers.IO) {
-                db.customLedgerDao().softDeleteEntries(listOf(entry!!.id), System.currentTimeMillis())
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@GenericViewActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
-                    finish()
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    db.customLedgerDao().softDeleteEntries(listOf(entry!!.id), System.currentTimeMillis())
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@GenericViewActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
                 }
             }
-        }
-        dialog.show()
+        }.show()
     }
 
     private fun Int.dpToPx() = (this * resources.displayMetrics.density).toInt()
+
+    @Suppress("DEPRECATION")
+    private inline fun <reified T : java.io.Serializable> Intent.getSerializableExtraCompat(key: String): T? {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            getSerializableExtra(key, T::class.java)
+        } else {
+            getSerializableExtra(key) as? T
+        }
+    }
 }

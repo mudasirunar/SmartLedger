@@ -24,6 +24,7 @@ import com.mudasir.smartledger.R
 import com.mudasir.smartledger.adapter.ThumbnailAdapter
 import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.Electricity
+import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -263,52 +264,38 @@ class AddEditElectricityActivity : AppCompatActivity() {
     }
 
     private fun showConfirmationDialog(record: Electricity, isNew: Boolean) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setView(dialogView)
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
-        val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
-
-        tvTitle.text = if(isNew) "Add Record" else "Update Record"
-        tvMessage.text = "Confirm details?"
-        btnConfirm.text = if(isNew) "Add" else "Update"
-
         val totalVal = record.totalUnits ?: 0.0
         val unitText = if (totalVal % 1.0 == 0.0) "${totalVal.toInt()} Units" else "$totalVal Units"
 
-        tvDetailTitle.text = unitText
-        tvDetailAmount.text = "Rs ${record.amount ?: 0.0}"
+        DialogHelper.createConfirmationDialog(
+            context = this,
+            title = if (isNew) "Add Record" else "Update Record",
+            message = "Confirm details?"
+        ) { views ->
+            views.btnConfirm.text = if (isNew) "Add" else "Update"
+            views.details.visibility = View.VISIBLE
+            views.detailTitle.text = unitText
+            views.detailAmount.text = "Rs ${record.amount ?: 0.0}"
 
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            // Launch coroutine to save to DB
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    if(isNew) {
-                        db.electricityDao().insert(record)
-                    } else {
-                        db.electricityDao().update(record)
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        if (isNew) {
+                            db.electricityDao().insert(record)
+                        } else {
+                            db.electricityDao().update(record)
+                        }
                     }
+                    val resultIntent = Intent().apply {
+                        putExtra("toast_message", if (isNew) "Record Added" else "Record Updated")
+                    }
+                    setResult(RESULT_OK, resultIntent)
+                    finish()
                 }
-                // Back on Main Thread
-                val resultIntent = Intent().apply {
-                    putExtra("toast_message", if (isNew) "Record Added" else "Record Updated")
-                }
-                setResult(RESULT_OK, resultIntent)
-                finish()
             }
-        }
-
-        dialog.show()
+        }.show()
     }
 
     // --- HELPERS ---

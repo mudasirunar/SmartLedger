@@ -16,6 +16,9 @@ import com.mudasir.smartledger.R
 import com.mudasir.smartledger.adapter.PhotoViewAdapter
 import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.Expense
+import com.mudasir.smartledger.util.DialogHelper
+import com.mudasir.smartledger.util.PhotoGridHelper
+import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -52,11 +55,7 @@ class ViewExpenseActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_view_expense)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        findViewById<View>(R.id.main).applySystemBarPadding(includeIme = true)
 
         expense = intent.getSerializableExtra("expense_data") as? Expense
         if (expense == null) {
@@ -97,68 +96,36 @@ class ViewExpenseActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.detailTvDescription).text = desc
         }
 
-        val rvPhotos = findViewById<RecyclerView>(R.id.detailRvPhotos)
-        val tvPhotoHeader = findViewById<View>(R.id.detailPhotos)
-        val images = expense?.imagePaths ?: emptyList()
-
-        if (images.isEmpty()) {
-            tvPhotoHeader.visibility = View.GONE
-            rvPhotos.visibility = View.GONE
-        } else {
-            tvPhotoHeader.visibility = View.VISIBLE
-            rvPhotos.visibility = View.VISIBLE
-
-            rvPhotos.apply {
-                setHasFixedSize(true)
-                layoutManager = GridLayoutManager(this@ViewExpenseActivity, 2)
-                adapter = PhotoViewAdapter(images) { imagePath ->
-                    val position = images.indexOf(imagePath)
-                    val intent = Intent(this@ViewExpenseActivity, ImageViewerActivity::class.java)
-                    intent.putStringArrayListExtra("image_paths", ArrayList(images))
-                    intent.putExtra("position", position)
-                    startActivity(intent)
-                }
-            }
-        }
+        PhotoGridHelper.setupPhotoGrid(
+            context = this,
+            recyclerView = findViewById(R.id.detailRvPhotos),
+            headerView = findViewById(R.id.detailPhotos),
+            images = expense?.imagePaths ?: emptyList()
+        )
     }
 
     private fun showDeleteConfirmationDialog(expense: Expense) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setView(dialogView)
+        DialogHelper.createConfirmationDialog(
+            context = this,
+            title = "Delete Record?",
+            message = "Are you sure you want to delete this record?"
+        ) { views ->
+            views.btnConfirm.text = "Delete"
+            views.details.visibility = View.VISIBLE
+            views.detailTitle.text = expense.title
+            views.detailAmount.text = "Rs ${expense.amount}"
 
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
-
-        tvTitle.text = "Delete Expense?"
-        tvMessage.text = "Move this item to the Trash Bin?"
-        btnConfirm.text = "Delete"
-
-        containerDetails.visibility = View.VISIBLE
-        tvDetailTitle.text = expense.title
-        tvDetailAmount.text = "Rs ${expense.amount}"
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            lifecycleScope.launch {
-                val currentTimestamp = System.currentTimeMillis()
-                withContext(Dispatchers.IO) {
-                    db.expenseDao().softDeleteExpenses(listOf(expense.id), currentTimestamp)
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        db.expenseDao().softDeleteExpenses(listOf(expense.id), System.currentTimeMillis())
+                    }
+                    Toast.makeText(this@ViewExpenseActivity, "Item moved to Trash", Toast.LENGTH_SHORT).show()
+                    finish()
                 }
-                Toast.makeText(this@ViewExpenseActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
-                finish()
             }
-        }
-        dialog.show()
+        }.show()
     }
 }

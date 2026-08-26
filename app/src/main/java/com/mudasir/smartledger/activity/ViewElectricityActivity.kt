@@ -16,6 +16,9 @@ import com.mudasir.smartledger.R
 import com.mudasir.smartledger.adapter.PhotoViewAdapter
 import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.Electricity
+import com.mudasir.smartledger.util.DialogHelper
+import com.mudasir.smartledger.util.PhotoGridHelper
+import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -52,11 +55,7 @@ class ViewElectricityActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_view_electricity)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        findViewById<View>(R.id.main).applySystemBarPadding(includeIme = true)
 
         record = intent.getSerializableExtra("electricity_data") as? Electricity
         if (record == null) { finish(); return }
@@ -95,65 +94,39 @@ class ViewElectricityActivity : AppCompatActivity() {
         val unitPrice = if (totalUnits > 0) amount / totalUnits else 0.0
         findViewById<TextView>(R.id.tvDetailUnitPrice).text = "Rs %.2f / Unit".format(unitPrice)
 
-        val rvPhotos = findViewById<RecyclerView>(R.id.detailRvPhotos)
-        val tvPhotoHeader = findViewById<View>(R.id.detailPhotos)
-        val images = record?.imagePaths ?: emptyList()
-
-        if (images.isEmpty()) {
-            tvPhotoHeader.visibility = View.GONE
-            rvPhotos.visibility = View.GONE
-        } else {
-            tvPhotoHeader.visibility = View.VISIBLE
-            rvPhotos.visibility = View.VISIBLE
-
-            rvPhotos.apply {
-                setHasFixedSize(true)
-                layoutManager = GridLayoutManager(this@ViewElectricityActivity, 2)
-                adapter = PhotoViewAdapter(images) { imagePath ->
-                    val pos = images.indexOf(imagePath)
-                    val intent = Intent(this@ViewElectricityActivity, ImageViewerActivity::class.java)
-                    intent.putStringArrayListExtra("image_paths", ArrayList(images))
-                    intent.putExtra("position", pos)
-                    startActivity(intent)
-                }
-            }
-        }
+        PhotoGridHelper.setupPhotoGrid(
+            context = this,
+            recyclerView = findViewById(R.id.detailRvPhotos),
+            headerView = findViewById(R.id.detailPhotos),
+            images = record?.imagePaths ?: emptyList()
+        )
     }
 
     private fun showDeleteDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setView(dialogView)
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val totalVal = record!!.totalUnits ?: 0.0
+        val unitText = if (totalVal % 1.0 == 0.0) "${totalVal.toInt()} Units" else "$totalVal Units"
 
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
+        DialogHelper.createConfirmationDialog(
+            context = this,
+            title = "Delete Record?",
+            message = "Move this to Trash?"
+        ) { views ->
+            views.btnConfirm.text = "Delete"
+            views.details.visibility = View.VISIBLE
+            views.detailTitle.text = unitText
+            views.detailAmount.text = "Rs ${record!!.amount ?: 0.0}"
 
-        tvTitle.text = "Delete Record?"
-        tvMessage.text = "Move this to Trash?"
-        btnConfirm.text = "Delete"
-
-        containerDetails.visibility = View.VISIBLE
-        tvDetailTitle.text = "${record!!.totalUnits ?: 0} Units"
-        tvDetailAmount.text = "Rs ${record!!.amount ?: 0.0}"
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    db.electricityDao().softDelete(listOf(record!!.id), System.currentTimeMillis())
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        db.electricityDao().softDelete(listOf(record!!.id), System.currentTimeMillis())
+                    }
+                    Toast.makeText(this@ViewElectricityActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
+                    finish()
                 }
-                Toast.makeText(this@ViewElectricityActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
-                finish()
             }
-        }
-        dialog.show()
+        }.show()
     }
 }

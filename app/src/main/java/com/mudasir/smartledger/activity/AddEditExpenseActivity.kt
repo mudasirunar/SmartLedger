@@ -22,6 +22,7 @@ import com.mudasir.smartledger.R
 import com.mudasir.smartledger.adapter.ThumbnailAdapter
 import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.Expense
+import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -340,62 +341,35 @@ class AddEditExpenseActivity : AppCompatActivity() {
     }
 
     private fun showSaveConfirmationDialog(expense: Expense, isNew: Boolean) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setView(dialogView)
+        DialogHelper.createConfirmationDialog(
+            context = this,
+            title = if (isNew) "Add Record" else "Update Record",
+            message = if (isNew) "Please confirm the details below:" else "Are you sure you want to update this record?"
+        ) { views ->
+            views.btnConfirm.text = if (isNew) "Add" else "Update"
+            views.details.visibility = View.VISIBLE
+            views.detailTitle.text = expense.title
+            views.detailAmount.text = "Rs ${expense.amount}"
 
-        val dialog = builder.create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val tvTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvDialogMessage)
-        val tvDetailTitle = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<android.widget.TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<android.widget.TextView>(R.id.btnDialogConfirm)
-
-        // Set Logic
-        if (isNew) {
-            tvTitle.text = "Add Record"
-            tvMessage.text = "Please confirm the details below:"
-            btnConfirm.text = "Add"
-        } else {
-            tvTitle.text = "Update Record"
-            tvMessage.text = "Are you sure you want to update this record?"
-            btnConfirm.text = "Update"
-        }
-
-        tvDetailTitle.text = expense.title
-        tvDetailAmount.text = "Rs ${expense.amount}"
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    if (isNew) {
-                        db.expenseDao().insertExpense(expense)
-                    } else {
-                        db.expenseDao().updateExpense(expense)
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        if (isNew) {
+                            db.expenseDao().insertExpense(expense)
+                        } else {
+                            db.expenseDao().updateExpense(expense)
+                        }
                     }
+                    val resultIntent = Intent()
+                    val isEdit = intent.hasExtra("expense_data")
+                    resultIntent.putExtra("toast_message", if (isEdit) "Record Updated" else "Record Added")
+                    setResult(RESULT_OK, resultIntent)
+                    finish()
                 }
-                val resultIntent = Intent()
-                val isEdit = intent.hasExtra("expense_data")
-
-                if (isEdit) {
-                    resultIntent.putExtra("toast_message", "Record Updated")
-                } else {
-                    resultIntent.putExtra("toast_message", "Record Added")
-                }
-
-                setResult(RESULT_OK, resultIntent)
-                finish()
             }
-        }
-
-        dialog.show()
+        }.show()
     }
     private fun hasUnsavedChanges(): Boolean {
         val currentTitle = etTitle.text.toString().trim()

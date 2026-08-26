@@ -237,9 +237,11 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
             adapter = GenericAdapter(
                 ledger = ledger,
                 onNormalClick = { entry ->
-                    val intent = Intent(this, GenericViewActivity::class.java)
-                    intent.putExtra("entry_data", entry)
-                    intent.putExtra("ledger_template", ledger)
+                    val intent = Intent(this, GenericViewActivity::class.java).apply {
+                        putExtra("entry_data", entry)
+                        putExtra("ledger_template", ledger)
+                        putExtra("ledger_id", ledger.id)
+                    }
                     startActivity(intent)
                 },
                 onLongClick = {
@@ -270,8 +272,10 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
             if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) {
                 showAddDailyLogDialog()
             } else {
-                val intent = Intent(this, GenericAddEditActivity::class.java)
-                intent.putExtra("ledger_template", ledger)
+                val intent = Intent(this, GenericAddEditActivity::class.java).apply {
+                    putExtra("ledger_template", ledger)
+                    putExtra("ledger_id", ledger.id)
+                }
                 startActivity(intent)
             }
         }

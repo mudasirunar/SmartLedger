@@ -22,11 +22,14 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.mudasir.smartledger.R
+import com.mudasir.smartledger.adapter.ThumbnailAdapter
 import com.mudasir.smartledger.data.AppDatabase
 import com.mudasir.smartledger.data.CustomEntry
 import com.mudasir.smartledger.data.CustomLedger
 import com.mudasir.smartledger.data.DateMode
 import com.mudasir.smartledger.data.FieldType
+import com.mudasir.smartledger.util.DialogHelper
+import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.textfield.TextInputEditText
@@ -91,12 +94,33 @@ class GenericAddEditActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_generic_add_edit)
+        findViewById<View>(R.id.main).applySystemBarPadding(includeIme = true)
 
-        selectedLedger = intent.getSerializableExtra("ledger_template") as? CustomLedger
-        existingEntry = intent.getSerializableExtra("existing_entry") as? CustomEntry
+        selectedLedger = intent.getSerializableExtraCompat<CustomLedger>("ledger_template")
+        existingEntry = intent.getSerializableExtraCompat<CustomEntry>("existing_entry")
 
-        if (selectedLedger == null) { finish(); return }
+        if (selectedLedger == null) {
+            val ledgerId = intent.getIntExtra("ledger_id", existingEntry?.ledgerId ?: 0)
+            if (ledgerId != 0) {
+                lifecycleScope.launch {
+                    val loaded = withContext(Dispatchers.IO) { db.customLedgerDao().getLedgerById(ledgerId) }
+                    if (loaded != null) {
+                        selectedLedger = loaded
+                        initUIAndPopulate(savedInstanceState)
+                    } else {
+                        finish()
+                    }
+                }
+            } else {
+                finish()
+            }
+            return
+        }
 
+        initUIAndPopulate(savedInstanceState)
+    }
+
+    private fun initUIAndPopulate(savedInstanceState: Bundle?) {
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { handleBackAction() }
         })
@@ -110,7 +134,9 @@ class GenericAddEditActivity : AppCompatActivity() {
             if (savedPaths != null) {
                 selectedImagePaths.clear()
                 selectedImagePaths.addAll(savedPaths)
-                thumbnailAdapter.notifyDataSetChanged()
+                if (::thumbnailAdapter.isInitialized) {
+                    thumbnailAdapter.notifyDataSetChanged()
+                }
             }
             initialStartDate = savedInstanceState.getLong("init_start_date")
             initialEndDate = savedInstanceState.getLong("init_end_date")
@@ -214,7 +240,9 @@ class GenericAddEditActivity : AppCompatActivity() {
 
             if (selectedImagePaths.isEmpty()) {
                 selectedImagePaths.addAll(entry.imagePaths)
-                thumbnailAdapter.notifyDataSetChanged()
+                if (::thumbnailAdapter.isInitialized) {
+                    thumbnailAdapter.notifyDataSetChanged()
+                }
                 updatePhotoUI()
             }
 
@@ -314,49 +342,40 @@ class GenericAddEditActivity : AppCompatActivity() {
     }
 
     private fun showConfirmationDialog(entry: CustomEntry, dataMap: Map<String, String>, isNew: Boolean) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_custom_confirmation, null)
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tvDialogTitle)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvDialogMessage)
-        val containerDetails = dialogView.findViewById<View>(R.id.containerDetails)
-        val tvDetailTitle = dialogView.findViewById<TextView>(R.id.tvDetailTitle)
-        val tvDetailAmount = dialogView.findViewById<TextView>(R.id.tvDetailAmount)
-        val btnCancel = dialogView.findViewById<View>(R.id.btnDialogCancel)
-        val btnConfirm = dialogView.findViewById<TextView>(R.id.btnDialogConfirm)
-
-        tvTitle.text = if (isNew) "Add Record" else "Update Record"
-        tvMessage.text = "Confirm details?"
-        btnConfirm.text = if (isNew) "Add" else "Update"
-
         val userFields = dataMap.filterKeys { it != "SYS_END_DATE" }
-        tvDetailTitle.text = if (userFields.isNotEmpty() && userFields.values.first().isNotEmpty()) {
+        val displayTitle = if (userFields.isNotEmpty() && userFields.values.first().isNotEmpty()) {
             userFields.values.first()
         } else {
-            selectedLedger?.name
+            selectedLedger?.name ?: "Record"
         }
 
-        tvDetailAmount.text = "Rs ${entry.amount ?: 0.0}"
-        containerDetails.visibility = View.VISIBLE
+        DialogHelper.createConfirmationDialog(
+            context = this,
+            title = if (isNew) "Add Record" else "Update Record",
+            message = "Confirm details?"
+        ) { views ->
+            views.btnConfirm.text = if (isNew) "Add" else "Update"
+            views.details.visibility = View.VISIBLE
+            views.detailTitle.text = displayTitle
+            views.detailAmount.text = "Rs ${entry.amount ?: 0.0}"
 
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            lifecycleScope.launch(Dispatchers.IO) {
-                if (isNew) db.customLedgerDao().insertEntry(entry)
-                else db.customLedgerDao().updateEntry(entry)
+            views.btnCancel.setOnClickListener { views.dialog.dismiss() }
+            views.btnConfirm.setOnClickListener {
+                views.dialog.dismiss()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    if (isNew) db.customLedgerDao().insertEntry(entry)
+                    else db.customLedgerDao().updateEntry(entry)
 
-                withContext(Dispatchers.Main) {
-                    val resultIntent = Intent().apply {
-                        putExtra("toast_message", if (isNew) "Record Added" else "Record Updated")
+                    withContext(Dispatchers.Main) {
+                        val resultIntent = Intent().apply {
+                            putExtra("toast_message", if (isNew) "Record Added" else "Record Updated")
+                        }
+                        setResult(RESULT_OK, resultIntent)
+                        finish()
                     }
-                    setResult(RESULT_OK, resultIntent)
-                    finish()
                 }
             }
-        }
-        dialog.show()
+        }.show()
     }
 
     private fun captureInitialState() {
@@ -500,7 +519,9 @@ class GenericAddEditActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     selectedImagePaths.add(file.absolutePath)
-                    thumbnailAdapter.notifyItemInserted(selectedImagePaths.size - 1)
+                    if (::thumbnailAdapter.isInitialized) {
+                        thumbnailAdapter.notifyItemInserted(selectedImagePaths.size - 1)
+                    }
                     updatePhotoUI()
                 }
             } catch (e: Exception) {
@@ -513,9 +534,13 @@ class GenericAddEditActivity : AppCompatActivity() {
 
     private fun updatePhotoUI() {
         val limit = selectedLedger?.photoLimit ?: 3
-        btnAddPhoto.isEnabled = selectedImagePaths.size < limit
-        btnAddPhoto.text = if (selectedImagePaths.size >= limit) "Limit Reached" else "Add"
-        tvPhotoCount.text = "Photos (Max $limit)"
+        if (::btnAddPhoto.isInitialized) {
+            btnAddPhoto.isEnabled = selectedImagePaths.size < limit
+            btnAddPhoto.text = if (selectedImagePaths.size >= limit) "Limit Reached" else "Add"
+        }
+        if (::tvPhotoCount.isInitialized) {
+            tvPhotoCount.text = "Photos (Max $limit)"
+        }
     }
 
     private fun showDatePicker(onDateSelected: (Long) -> Unit) {
@@ -624,4 +649,13 @@ class GenericAddEditActivity : AppCompatActivity() {
     }
 
     private fun Int.dpToPx() = (this * resources.displayMetrics.density).toInt()
+
+    @Suppress("DEPRECATION")
+    private inline fun <reified T : java.io.Serializable> Intent.getSerializableExtraCompat(key: String): T? {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            getSerializableExtra(key, T::class.java)
+        } else {
+            getSerializableExtra(key) as? T
+        }
+    }
 }
