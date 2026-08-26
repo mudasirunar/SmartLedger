@@ -130,7 +130,17 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
         val rv = findViewById<RecyclerView>(R.id.rvExpenses)
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = adapter
-        rv.alpha = 0f
+
+        // Render from RAM cache instantly (0ms) if available
+        com.mudasir.smartledger.data.DataCache.cachedExpenses?.let { cached ->
+            adapter.submitList(cached)
+            rv.alpha = 1f
+            tvEmpty.visibility = if (cached.isEmpty()) View.VISIBLE else View.GONE
+            supportActionBar?.subtitle = "${cached.size} Records"
+        } ?: run {
+            rv.alpha = 0f
+        }
+
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dy > 0 && fabAdd.isShown) fabAdd.hide()
@@ -153,6 +163,7 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
                 SortType.AMOUNT_ASC -> db.expenseDao().getAllExpensesByAmountAsc()
             }
             flow.collect { list ->
+                com.mudasir.smartledger.data.DataCache.cachedExpenses = list
                 val rv = findViewById<RecyclerView>(R.id.rvExpenses)
                 adapter.submitList(list) {
                     if (rv.alpha == 0f) {

@@ -9,6 +9,9 @@ interface MilkDao {
     @Query("SELECT * FROM milk_records WHERE isDeleted = 0 ORDER BY year DESC, monthIndex DESC")
     fun getAllByDateDesc(): Flow<List<MilkRecord>>
 
+    @Query("SELECT * FROM milk_records WHERE isDeleted = 0 ORDER BY year DESC, monthIndex DESC")
+    suspend fun getActiveRaw(): List<MilkRecord>
+
     @Query("SELECT * FROM milk_records WHERE isDeleted = 0 ORDER BY year ASC, monthIndex ASC")
     fun getAllByDateAsc(): Flow<List<MilkRecord>>
 

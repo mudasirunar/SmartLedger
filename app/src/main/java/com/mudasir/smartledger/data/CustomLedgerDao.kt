@@ -102,6 +102,9 @@ interface CustomLedgerDao {
     @Query("SELECT * FROM custom_entries WHERE ledgerId = :lId AND isDeleted = 0 ORDER BY date DESC")
     fun getEntriesByDateDesc(lId: Int): Flow<List<CustomEntry>>
 
+    @Query("SELECT * FROM custom_entries WHERE ledgerId = :lId AND isDeleted = 0 ORDER BY date DESC")
+    suspend fun getActiveEntriesRaw(lId: Int): List<CustomEntry>
+
     @Query("SELECT * FROM custom_entries WHERE ledgerId = :lId AND isDeleted = 0 ORDER BY date ASC")
     fun getEntriesByDateAsc(lId: Int): Flow<List<CustomEntry>>
 
@@ -123,6 +126,9 @@ interface CustomLedgerDao {
 
     @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY year DESC, monthIndex DESC")
     fun getDailyRecordsByDateDesc(ledgerId: Int): Flow<List<CustomDailyRecord>>
+
+    @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY year DESC, monthIndex DESC")
+    suspend fun getActiveDailyRecordsRaw(ledgerId: Int): List<CustomDailyRecord>
 
     @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND isDeleted = 0 ORDER BY year ASC, monthIndex ASC")
     fun getDailyRecordsByDateAsc(ledgerId: Int): Flow<List<CustomDailyRecord>>

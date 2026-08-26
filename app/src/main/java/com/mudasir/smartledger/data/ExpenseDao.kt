@@ -9,6 +9,9 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY date DESC")
     fun getAllExpensesByDateDesc(): Flow<List<Expense>>
 
+    @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY date DESC")
+    suspend fun getActiveRaw(): List<Expense>
+
     @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY date ASC")
     fun getAllExpensesByDateAsc(): Flow<List<Expense>>
 

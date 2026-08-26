@@ -172,6 +172,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                 }
 
                 flow.collect { list ->
+                    com.mudasir.smartledger.data.DataCache.cachedDailyEntries[ledger.id] = list
                     val rv = findViewById<RecyclerView>(R.id.rvGenericRecords)
                     dailyAdapter.submitList(list) {
                         if (rv.alpha == 0f) {
@@ -191,6 +192,7 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
                 }
 
                 flow.collect { list ->
+                    com.mudasir.smartledger.data.DataCache.cachedCustomEntries[ledger.id] = list
                     val rv = findViewById<RecyclerView>(R.id.rvGenericRecords)
                     adapter.submitList(list) {
                         if (rv.alpha == 0f) {
@@ -265,7 +267,26 @@ class GenericLedgerActivity : AppCompatActivity(), NavigationView.OnNavigationIt
             rv.adapter = adapter
         }
 
-        rv.alpha = 0f
+        // Render from RAM cache instantly (0ms) if available
+        if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) {
+            com.mudasir.smartledger.data.DataCache.cachedDailyEntries[ledger.id]?.let { cached ->
+                dailyAdapter.submitList(cached)
+                rv.alpha = 1f
+                findViewById<View>(R.id.tvEmpty).visibility = if (cached.isEmpty()) View.VISIBLE else View.GONE
+                supportActionBar?.subtitle = "${cached.size} Records"
+            } ?: run {
+                rv.alpha = 0f
+            }
+        } else {
+            com.mudasir.smartledger.data.DataCache.cachedCustomEntries[ledger.id]?.let { cached ->
+                adapter.submitList(cached)
+                rv.alpha = 1f
+                findViewById<View>(R.id.tvEmpty).visibility = if (cached.isEmpty()) View.VISIBLE else View.GONE
+                supportActionBar?.subtitle = "${cached.size} Records"
+            } ?: run {
+                rv.alpha = 0f
+            }
+        }
 
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {

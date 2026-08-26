@@ -128,7 +128,16 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val rv = findViewById<RecyclerView>(R.id.rvMilk)
         rv.adapter = adapter
         rv.layoutManager = LinearLayoutManager(this)
-        rv.alpha = 0f
+
+        // Render from RAM cache instantly (0ms) if available
+        com.mudasir.smartledger.data.DataCache.cachedMilk?.let { cached ->
+            adapter.submitList(cached)
+            rv.alpha = 1f
+            tvEmpty.visibility = if (cached.isEmpty()) View.VISIBLE else View.GONE
+            supportActionBar?.subtitle = "${cached.size} Records"
+        } ?: run {
+            rv.alpha = 0f
+        }
 
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -246,6 +255,7 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 SortType.LITERS_ASC -> db.milkDao().getAllByLitersAsc()
             }
             flow.collect { list ->
+                com.mudasir.smartledger.data.DataCache.cachedMilk = list
                 val rv = findViewById<RecyclerView>(R.id.rvMilk)
                 adapter.submitList(list) {
                     if (rv.alpha == 0f) {

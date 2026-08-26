@@ -135,7 +135,16 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
         val rv = findViewById<RecyclerView>(R.id.rvElectricity)
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = adapter
-        rv.alpha = 0f
+
+        // Render from RAM cache instantly (0ms) if available
+        com.mudasir.smartledger.data.DataCache.cachedElectricity?.let { cached ->
+            adapter.submitList(cached)
+            rv.alpha = 1f
+            tvEmpty.visibility = if (cached.isEmpty()) View.VISIBLE else View.GONE
+            supportActionBar?.subtitle = "${cached.size} Records"
+        } ?: run {
+            rv.alpha = 0f
+        }
 
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -162,6 +171,7 @@ class ElectricityActivity : AppCompatActivity(), NavigationView.OnNavigationItem
                 SortType.UNITS_ASC -> db.electricityDao().getAllByUnitsAsc()
             }
             flow.collect { list ->
+                com.mudasir.smartledger.data.DataCache.cachedElectricity = list
                 val rv = findViewById<RecyclerView>(R.id.rvElectricity)
                 adapter.submitList(list) {
                     if (rv.alpha == 0f) {

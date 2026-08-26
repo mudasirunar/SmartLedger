@@ -134,6 +134,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             db.milkDao().deleteExpiredTrash(fifteenDaysAgo)
             db.customLedgerDao().deleteExpiredTrash(fifteenDaysAgo)
             db.customLedgerDao().autoCleanExpiredLedgers(fifteenDaysAgo)
+
+            // Pre-warm RAM cache in background on app start for 0ms instant open
+            try {
+                com.mudasir.smartledger.data.DataCache.cachedElectricity = db.electricityDao().getActiveRaw()
+                com.mudasir.smartledger.data.DataCache.cachedExpenses = db.expenseDao().getActiveRaw()
+                com.mudasir.smartledger.data.DataCache.cachedMilk = db.milkDao().getActiveRaw()
+
+                val customLedgers = db.customLedgerDao().getAllLedgersList()
+                com.mudasir.smartledger.data.DataCache.cachedCustomLedgers = customLedgers
+                customLedgers.forEach { ledger ->
+                    if (ledger.ledgerType == com.mudasir.smartledger.data.LedgerType.DAILY_LOG) {
+                        com.mudasir.smartledger.data.DataCache.cachedDailyEntries[ledger.id] = db.customLedgerDao().getActiveDailyRecordsRaw(ledger.id)
+                    } else {
+                        com.mudasir.smartledger.data.DataCache.cachedCustomEntries[ledger.id] = db.customLedgerDao().getActiveEntriesRaw(ledger.id)
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore background pre-warm failures safely
+            }
         }
     }
 
@@ -236,6 +255,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             dialog.dismiss()
             lifecycleScope.launch(Dispatchers.IO) {
                 db.clearAllTables()
+                com.mudasir.smartledger.data.DataCache.clear()
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@MainActivity, "App Reset Successfully", Toast.LENGTH_SHORT).show()
                 }
@@ -539,10 +559,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         rv.layoutManager = GridLayoutManager(this, 2)
         rv.adapter = dashboardAdapter
         rv.isNestedScrollingEnabled = false
-        rv.alpha = 0f
+
+        // If RAM cache exists, render ALL dashboard cards (main 3 + custom ledgers + Add) instantly (0ms delay)
+        com.mudasir.smartledger.data.DataCache.cachedCustomLedgers?.let { cached ->
+            val tiles = mutableListOf<DashboardTile>()
+            tiles.add(DashboardTile(1, "Electricity", R.drawable.ic_bolt, null))
+            tiles.add(DashboardTile(2, "Milk", R.drawable.ic_water_drop, null))
+            tiles.add(DashboardTile(3, "Expenses", R.drawable.ic_attach_money, null))
+            cached.forEach { ledger ->
+                tiles.add(DashboardTile(ledger.id + 100, ledger.name, null, ledger.iconName, true, false, ledger))
+            }
+            tiles.add(DashboardTile(-1, "Add Ledger", null, "ic_add", false, true))
+            dashboardAdapter.submitList(tiles)
+            rv.alpha = 1f
+        } ?: run {
+            rv.alpha = 0f
+        }
 
         lifecycleScope.launch {
             db.customLedgerDao().getAllLedgers().collect { customLedgers ->
+                com.mudasir.smartledger.data.DataCache.cachedCustomLedgers = customLedgers
+
                 val tiles = mutableListOf<DashboardTile>()
 
                 tiles.add(DashboardTile(1, "Electricity", R.drawable.ic_bolt, null))

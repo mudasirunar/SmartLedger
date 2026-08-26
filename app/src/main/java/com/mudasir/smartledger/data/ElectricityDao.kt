@@ -9,6 +9,9 @@ interface ElectricityDao {
     @Query("SELECT * FROM electricity_records WHERE isDeleted = 0 ORDER BY endDate DESC")
     fun getAllByDateDesc(): Flow<List<Electricity>>
 
+    @Query("SELECT * FROM electricity_records WHERE isDeleted = 0 ORDER BY endDate DESC")
+    suspend fun getActiveRaw(): List<Electricity>
+
     @Query("SELECT * FROM electricity_records WHERE isDeleted = 0 ORDER BY endDate ASC")
     fun getAllByDateAsc(): Flow<List<Electricity>>
 
