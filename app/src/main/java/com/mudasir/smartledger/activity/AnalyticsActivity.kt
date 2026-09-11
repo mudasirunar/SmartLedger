@@ -632,7 +632,16 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 if (hasElecData) {
                     elecBtnAi.setOnClickListener {
                         val summary = AiHelper.summarizeElectricity(elecList)
-                        startAiInsight("Electricity", summary, elecList.size)
+                        val lastRecord = elecList.lastOrNull()
+                        val lastEndDate = lastRecord?.endDate ?: System.currentTimeMillis()
+                        val calPredict = Calendar.getInstance().apply {
+                            timeInMillis = lastEndDate
+                            add(Calendar.MONTH, 1)
+                        }
+                        val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calPredict.time)
+                        val lastMonthLabel = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(lastEndDate))
+                        val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthLabel. Predict for: $predictMonthName only.]"
+                        startAiInsight("Electricity", summaryWithContext, elecList.size)
                     }
                 }
 
@@ -645,16 +654,24 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
                 if (hasMilkData) {
                     milkBtnAi.setOnClickListener {
+                        if (historicalMilkList.isEmpty()) {
+                            Toast.makeText(this@AnalyticsActivity, "No completed months to analyze (current month is in progress)", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
                         val summary = AiHelper.summarizeMilk(historicalMilkList)
                         val lastRecord = historicalMilkList.lastOrNull()
-                        val lastMonthName = lastRecord?.monthName ?: ""
                         val lastYear = lastRecord?.year ?: 0
-                        val calPredict = Calendar.getInstance()
-                        calPredict.set(Calendar.MONTH, lastRecord?.monthIndex ?: 0)
-                        calPredict.set(Calendar.YEAR, lastYear)
-                        calPredict.add(Calendar.MONTH, 1)
+                        val lastMonthIndex = lastRecord?.monthIndex ?: 0
+                        val calPredict = Calendar.getInstance().apply {
+                            set(Calendar.MONTH, lastMonthIndex)
+                            set(Calendar.YEAR, lastYear)
+                            add(Calendar.MONTH, 1)
+                        }
                         val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calPredict.time)
-                        val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthName $lastYear. Predict for: $predictMonthName only.]"
+                        val lastMonthLabel = lastRecord?.let {
+                            if (it.monthName.contains(it.year.toString())) it.monthName else "${it.monthName} ${it.year}"
+                        } ?: ""
+                        val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthLabel. Predict for: $predictMonthName only.]"
                         startAiInsight("Milk", summaryWithContext, historicalMilkList.size)
                     }
                 }
@@ -669,7 +686,16 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 if (hasExpenseData) {
                     expenseBtnAi.setOnClickListener {
                         val summary = AiHelper.summarizeExpenses(expenseList)
-                        startAiInsight("Expense", summary, expenseList.size)
+                        val lastExpense = expenseList.lastOrNull()
+                        val lastDate = lastExpense?.date ?: System.currentTimeMillis()
+                        val calPredict = Calendar.getInstance().apply {
+                            timeInMillis = lastDate
+                            add(Calendar.MONTH, 1)
+                        }
+                        val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calPredict.time)
+                        val lastMonthLabel = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(lastDate))
+                        val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthLabel. Predict for: $predictMonthName only.]"
+                        startAiInsight("Expense", summaryWithContext, expenseList.size)
                     }
                 }
             }

@@ -39,6 +39,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 
 class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -231,13 +235,22 @@ class ExpenseActivity : AppCompatActivity(), NavigationView.OnNavigationItemSele
             }
             R.id.action_ai_analysis -> {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val list = db.expenseDao().getAllRaw().filter { !it.isDeleted }
+                    val list = db.expenseDao().getAllRaw().filter { !it.isDeleted }.sortedBy { it.date }
                     if (list.isNotEmpty()) {
                         val summary = AiHelper.summarizeExpenses(list)
+                        val lastExpense = list.lastOrNull()
+                        val lastDate = lastExpense?.date ?: System.currentTimeMillis()
+                        val calPredict = Calendar.getInstance().apply {
+                            timeInMillis = lastDate
+                            add(Calendar.MONTH, 1)
+                        }
+                        val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calPredict.time)
+                        val lastMonthLabel = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(lastDate))
+                        val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthLabel. Predict for: $predictMonthName only.]"
                         withContext(Dispatchers.Main) {
                             val intent = Intent(this@ExpenseActivity, AiInsightActivity::class.java).apply {
                                 putExtra("DATA_TYPE", "Expense")
-                                putExtra("DATA_SUMMARY", summary)
+                                putExtra("DATA_SUMMARY", summaryWithContext)
                                 putExtra("RECORD_COUNT", list.size)
                             }
                             startActivity(intent)

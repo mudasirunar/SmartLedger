@@ -100,24 +100,33 @@ object AiHelper {
 
     suspend fun getInsight(dataType: String, dataSummary: String): String {
         val currentDate = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
-        val localContext = when (dataType.lowercase()) {
-            "electricity" -> "Location: Karachi. Utility: K-Electric. Focus on units (kWh), peak/off-peak logic, and weather impact on cooling."
-            "milk" -> "Location: Karachi. Context: Daily milk consumption and pricing. Focus on price per liter and monthly consumption stability."
-            else -> "Location: Karachi. Context: General expenses and budgets. Focus on budgeting and inflation in Pakistan."
+        val cleanSummary = dataSummary
+            .replace(Regex("\\[Last completed month:.*?\\]"), "")
+            .trim()
+
+        val domainContext = when (dataType.lowercase()) {
+            "electricity" -> "Domain: Electricity consumption and utility billing. Focus on units consumed (kWh), seasonal trends, cost per unit, and energy efficiency."
+            "milk" -> "Domain: Household milk consumption and expenditure (completed historical months only). Focus on monthly volume (Liters), rate per liter, consistency, and consumption patterns."
+            else -> "Domain: Personal and household expense tracking. Focus on spending distribution across categories, recurring vs discretionary expenses, and budget discipline."
         }
 
         val prompt = """
         Today's Date: $currentDate.
-        $localContext
-        Role: Expert Financial Analyst.
-        Data: $dataSummary
+        $domainContext
+        Role: Senior Financial Analyst & Household Budget Specialist.
+        Historical Records: $cleanSummary
         
         Task:
-        1. Analyze the trend for $dataType.
-        2. Identify any unusual spikes in cost or quantity.
-        3. Provide one Karachi-specific tip to optimize this spending.
+        1. Trend Analysis: Concisely analyze historical spending and consumption patterns for $dataType based on the recorded data.
+        2. Spikes & Anomalies: Identify any notable shifts, spikes, or drops in cost, rates, or quantities across the periods.
+        3. Practical Optimization Tip: Provide one practical, actionable tip to optimize consumption or reduce expenses for this specific category.
         
-        Format: Use 3-4 bullet points. Use 'PKR' and 'Units/Liters' clearly. No bolding or hashtags.
+        CRITICAL RULES:
+        - Analyze ONLY the past historical data provided above.
+        - DO NOT provide any future predictions, forecasts, or estimated next-month costs or units in this analysis. Predictions will be explicitly requested later by the user if needed.
+        - Keep the analysis strictly retrospective, professional, and clear.
+        - Use 'PKR' or 'Rs' and clear units ('Liters' or 'Units/kWh').
+        - Format: 3 to 4 concise bullet points. Plain text only. No bolding (**), asterisks (*), or markdown headers (#).
     """.trimIndent()
 
         return callLedgerAi(prompt)
@@ -131,29 +140,31 @@ object AiHelper {
             .replace(Regex("\\[Last completed month:.*?\\]"), "")
             .trim()
 
-        val localContext = when (dataType.lowercase()) {
-            "electricity" -> "Karachi weather context: Heatwaves in summer, lower usage in winter. K-Electric billing."
-            "milk" -> "Context: Standard milk price fluctuations in Karachi dairy markets."
-            else -> "Context: General expenses and budgets in Karachi market trends."
+        val domainContext = when (dataType.lowercase()) {
+            "electricity" -> "Domain: Electricity consumption forecasting. Account for seasonal weather patterns (e.g. heating or cooling demands) and historical billing trends."
+            "milk" -> "Domain: Household milk consumption and cost forecasting. Base projections on established daily consumption habits and recent price per liter."
+            else -> "Domain: Household expense forecasting. Consider historical monthly expenditure averages, recurring obligations, and recent spending trends."
         }
 
         val prompt = """
-        Today: $currentDate.
-        $localContext
+        Current Date: $currentDate.
+        $domainContext
         Role: Expert Financial Forecaster.
-        History: $cleanSummary
+        Historical Records: $cleanSummary
         
-        IMPORTANT: You are predicting specifically for: $predictMonth.
-        Do NOT predict any other month. The prediction header must say "Prediction for $predictMonth".
+        Target Forecast Period: $predictMonth.
         
         Task:
-        1. Start with a clear header: "Prediction for $predictMonth"
-        2. Explain the prediction based on $predictMonth's season or expected trend.
-        3. Compare briefly to the last completed month's actual data.
-        4. Predict total cost in PKR for $predictMonth (e.g., "Estimated Cost: Rs 5,200").
-        5. Predict quantity for $predictMonth (e.g., "Estimated Quantity: 60 Liters" or "150 Units").
+        1. Header: Start with the header "Prediction for $predictMonth"
+        2. Expected Trend: Explain the expected direction for $predictMonth based on historical trends and seasonal or usage patterns.
+        3. Baseline Comparison: Compare briefly with the last recorded period to highlight expected changes.
+        4. Estimated Cost: Provide a realistic predicted cost in PKR for $predictMonth (e.g., "Estimated Cost: Rs 5,200").
+        5. Estimated Quantity: Provide a realistic predicted quantity for $predictMonth if applicable (e.g., "Estimated Quantity: 60 Liters" or "150 Units").
         
-        Format: Concise bullet points. Plain text only. No bold or hashtags.
+        Formatting:
+        - Output concise bullet points. Plain text only.
+        - Do not use bolding (**), asterisks (*), or markdown headers (#).
+        - Use 'Rs' or 'PKR' and standard units clearly.
     """.trimIndent()
 
         return callLedgerAi(prompt)

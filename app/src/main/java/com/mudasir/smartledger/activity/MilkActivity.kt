@@ -43,7 +43,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 
 class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -356,20 +359,40 @@ class MilkActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             R.id.action_ai_analysis -> {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val list = db.milkDao().getAllRaw().filter { !it.isDeleted }
-                    if (list.isNotEmpty()) {
-                        val summary = AiHelper.summarizeMilk(list)
+                    val allRecords = db.milkDao().getAllRaw().filter { !it.isDeleted }
+                    val nowCal = Calendar.getInstance()
+                    val currentMonth = nowCal.get(Calendar.MONTH)
+                    val currentYear = nowCal.get(Calendar.YEAR)
+                    val historicalList = allRecords.filter {
+                        !(it.monthIndex == currentMonth && it.year == currentYear)
+                    }.sortedWith(compareBy({ it.year }, { it.monthIndex }))
+
+                    if (historicalList.isNotEmpty()) {
+                        val summary = AiHelper.summarizeMilk(historicalList)
+                        val lastRecord = historicalList.lastOrNull()
+                        val lastYear = lastRecord?.year ?: currentYear
+                        val lastMonthIdx = lastRecord?.monthIndex ?: currentMonth
+                        val calPredict = Calendar.getInstance().apply {
+                            set(Calendar.MONTH, lastMonthIdx)
+                            set(Calendar.YEAR, lastYear)
+                            add(Calendar.MONTH, 1)
+                        }
+                        val predictMonthName = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calPredict.time)
+                        val lastMonthLabel = lastRecord?.let {
+                            if (it.monthName.contains(it.year.toString())) it.monthName else "${it.monthName} ${it.year}"
+                        } ?: ""
+                        val summaryWithContext = "$summary\n\n[Last completed month: $lastMonthLabel. Predict for: $predictMonthName only.]"
                         withContext(Dispatchers.Main) {
                             val intent = Intent(this@MilkActivity, AiInsightActivity::class.java).apply {
                                 putExtra("DATA_TYPE", "Milk")
-                                putExtra("DATA_SUMMARY", summary)
-                                putExtra("RECORD_COUNT", list.size)
+                                putExtra("DATA_SUMMARY", summaryWithContext)
+                                putExtra("RECORD_COUNT", historicalList.size)
                             }
                             startActivity(intent)
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MilkActivity, "No data for analysis", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@MilkActivity, "No completed months to analyze (current month is in progress)", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
