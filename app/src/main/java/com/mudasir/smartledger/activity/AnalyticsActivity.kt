@@ -118,6 +118,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     private var last12mMilkLiters = 0.0
     private var last12mMilkCost = 0.0
     private var totalExpenseCost = 0.0
+    private var isInitialLoad = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -140,8 +141,6 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         setupExpenseNavigation()
         fixChartScrollConflict()
         DrawerNavigationHelper.observeCustomLedgers(this, findViewById<NavigationView>(R.id.navigationView))
-        loadData()
-
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -557,7 +556,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     }
 
     // DATA LOADING
-    private fun loadData() {
+    private fun loadData(animate: Boolean = false) {
         lifecycleScope.launch(Dispatchers.IO) {
             val expenses = db.expenseDao().getAllRaw()
             val milkRecords = db.milkDao().getAllRaw()
@@ -601,8 +600,9 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 last12mMilkCost = 0.0
             }
 
-            val currentMonthIdx = cal.get(Calendar.MONTH)
-            val currentYear = cal.get(Calendar.YEAR)
+            val nowCal = Calendar.getInstance()
+            val currentMonthIdx = nowCal.get(Calendar.MONTH)
+            val currentYear = nowCal.get(Calendar.YEAR)
 
             val expenseList = expenses.filter { !it.isDeleted }.sortedBy { it.date }
             val historicalMilkList = milkList.filter {
@@ -610,17 +610,17 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
             }
 
             withContext(Dispatchers.Main) {
-                setupPieChart(totalExpenseCost.toFloat(), totalMilkCost.toFloat(), totalElecCost.toFloat(), grandTotal.toFloat())
+                setupPieChart(totalExpenseCost.toFloat(), totalMilkCost.toFloat(), totalElecCost.toFloat(), grandTotal.toFloat(), animate = animate)
                 setupElectricityCharts(elecList)
                 setupElectricityYoYChart(elecList)
                 setupMilkCharts(milkList)
                 setupMilkYoYChart(milkList)
                 setupExpenseCharts(expenseList)
 
-                // Trigger final UI update and single smooth animation
-                updateElecChartVisibility(true)
-                updateMilkChartVisibility(true)
-                updateExpenseVisibility(true)
+                // Trigger final UI update
+                updateElecChartVisibility(animate)
+                updateMilkChartVisibility(animate)
+                updateExpenseVisibility(animate)
 
                 // --- ELECTRICITY BUTTONS VISIBILITY ---
                 val elecBtnAi = findViewById<ImageButton>(R.id.btnElecAi)
@@ -678,7 +678,15 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
 
     // ================== MILK CHARTS ==================
     private fun setupMilkCharts(records: List<MilkRecord>) {
-        if (records.isEmpty()) return
+        if (records.isEmpty()) {
+            barChartMilkLitres.clear()
+            barChartMilkCost.clear()
+            barChartMilkLitres.setNoDataText("No chart data available")
+            barChartMilkCost.setNoDataText("No chart data available")
+            barChartMilkLitres.invalidate()
+            barChartMilkCost.invalidate()
+            return
+        }
 
         val displayRecords = records.sortedWith(compareByDescending<MilkRecord> { it.year }.thenByDescending { it.monthIndex })
         val entriesLitres = ArrayList<BarEntry>()
@@ -719,6 +727,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 val idx = e.x.toInt()
                 if (idx in displayRecords.indices) {
                     val clickedRecord = displayRecords[idx]
+                    barChartMilkLitres.highlightValues(null)
+                    barChartMilkCost.highlightValues(null)
                     val intent = Intent(this@AnalyticsActivity, ViewMilkActivity::class.java)
                     intent.putExtra("milk_data", clickedRecord)
                     startActivity(intent)
@@ -731,7 +741,9 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     }
     private fun setupMilkYoYChart(records: List<MilkRecord>) {
         if (records.isEmpty()) {
+            barChartMilkYoY.clear()
             barChartMilkYoY.setNoDataText("No chart data available")
+            barChartMilkYoY.invalidate()
             return
         }
 
@@ -829,7 +841,9 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     // ================== ELECTRICITY CHARTS ==================
     private fun setupElectricityYoYChart(records: List<Electricity>) {
         if (records.isEmpty()) {
+            barChartYoY.clear()
             barChartYoY.setNoDataText("No chart data available")
+            barChartYoY.invalidate()
             return
         }
 
@@ -922,7 +936,15 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     }
 
     private fun setupElectricityCharts(records: List<Electricity>) {
-        if (records.isEmpty()) return
+        if (records.isEmpty()) {
+            barChartUnits.clear()
+            barChartCost.clear()
+            barChartUnits.setNoDataText("No chart data available")
+            barChartCost.setNoDataText("No chart data available")
+            barChartUnits.invalidate()
+            barChartCost.invalidate()
+            return
+        }
 
         val displayRecords = records.sortedByDescending { it.endDate }
         val entriesUnits = ArrayList<BarEntry>()
@@ -960,6 +982,8 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 val idx = e.x.toInt()
                 if (idx in displayRecords.indices) {
                     val clickedRecord = displayRecords[idx]
+                    barChartUnits.highlightValues(null)
+                    barChartCost.highlightValues(null)
                     val intent = Intent(this@AnalyticsActivity, ViewElectricityActivity::class.java)
                     intent.putExtra("electricity_data", clickedRecord)
                     startActivity(intent)
@@ -974,8 +998,13 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
     // ================== EXPENSE CHARTS ==================
     private fun setupExpenseCharts(records: List<Expense>) {
         if (records.isEmpty()) {
+            barChartExpenseMonthly.clear()
+            pieChartExpenseCategory.clear()
             barChartExpenseMonthly.setNoDataText("No chart data available")
             pieChartExpenseCategory.setNoDataText("No chart data available")
+            layoutExpenseLegend.removeAllViews()
+            barChartExpenseMonthly.invalidate()
+            pieChartExpenseCategory.invalidate()
             return
         }
 
@@ -1014,6 +1043,7 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
                 if (idx in monthExpensesList.indices) {
                     val clickedExpense = monthExpensesList[idx].firstOrNull()
                     if (clickedExpense != null) {
+                        barChartExpenseMonthly.highlightValues(null)
                         val intent = Intent(this@AnalyticsActivity, ViewExpenseActivity::class.java)
                         intent.putExtra("expense_data", clickedExpense)
                         startActivity(intent)
@@ -1151,12 +1181,14 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         chart.setVisibleXRangeMaximum(6f)
         chart.moveViewToX(-0.5f)
         chart.extraBottomOffset = 10f
+        chart.notifyDataSetChanged()
         chart.invalidate()
     }
 
-    private fun setupPieChart(exp: Float, milk: Float, elec: Float, grandTotal: Float) {
+    private fun setupPieChart(exp: Float, milk: Float, elec: Float, grandTotal: Float, animate: Boolean = true) {
         if (grandTotal <= 0) {
             pieChart.clear()
+            pieChart.setNoDataText("No chart data available")
             pieChart.invalidate()
             return
         }
@@ -1198,7 +1230,10 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         pieChart.legend.isEnabled = true
         pieChart.legend.textColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface)
         pieChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.CENTER
-        pieChart.animateY(1400)
+        if (animate) {
+            pieChart.animateY(1400)
+        }
+        pieChart.notifyDataSetChanged()
         pieChart.invalidate()
     }
 
@@ -1264,5 +1299,15 @@ class AnalyticsActivity : AppCompatActivity(), NavigationView.OnNavigationItemSe
         val navView = findViewById<NavigationView>(R.id.navigationView)
         DrawerNavigationHelper.updateHeaderLastBackup(this, navView)
         navView.setCheckedItem(R.id.nav_analytics)
+
+        // Clear any chart highlights so bars are not stuck in selected state
+        barChartMilkLitres.highlightValues(null)
+        barChartMilkCost.highlightValues(null)
+        barChartUnits.highlightValues(null)
+        barChartCost.highlightValues(null)
+        barChartExpenseMonthly.highlightValues(null)
+
+        loadData(animate = isInitialLoad)
+        isInitialLoad = false
     }
 }

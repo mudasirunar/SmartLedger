@@ -24,7 +24,9 @@ import com.mudasir.smartledger.util.DialogHelper
 import com.mudasir.smartledger.util.MilkNotificationConstants
 import com.mudasir.smartledger.util.applySystemBarPadding
 import com.google.android.material.appbar.MaterialToolbar
+import com.mudasir.smartledger.data.DataCache
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -49,6 +51,16 @@ class ViewMilkActivity : AppCompatActivity() {
         if (record == null) { finish(); return }
 
         setupUI()
+
+        record?.id?.let { id ->
+            lifecycleScope.launch {
+                val latest = withContext(Dispatchers.IO) { db.milkDao().getById(id) }
+                if (latest != null && latest != record) {
+                    record = latest
+                    setupUI()
+                }
+            }
+        }
     }
 
     private fun setupUI() {
@@ -101,8 +113,9 @@ class ViewMilkActivity : AppCompatActivity() {
             views.btnConfirm.setOnClickListener {
                 views.dialog.dismiss()
                 lifecycleScope.launch {
-                    withContext(Dispatchers.IO) {
+                    withContext(Dispatchers.IO + NonCancellable) {
                         db.milkDao().softDelete(listOf(record!!.id), System.currentTimeMillis())
+                        DataCache.cachedMilk = null
                     }
                     Toast.makeText(this@ViewMilkActivity, "Moved to Trash", Toast.LENGTH_SHORT).show()
                     finish()
@@ -136,8 +149,9 @@ class ViewMilkActivity : AppCompatActivity() {
         )
 
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO + NonCancellable) {
                 db.milkDao().update(updatedRecord)
+                DataCache.cachedMilk = null
                 val today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
                 val todayEntry = updatedRecord.dailyEntries.find { it.day == today }
                 if (todayEntry != null && (todayEntry.liters ?: 0.0) > 0.0) {

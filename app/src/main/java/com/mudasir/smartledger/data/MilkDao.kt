@@ -27,6 +27,10 @@ interface MilkDao {
     @Query("SELECT * FROM milk_records WHERE isDeleted = 0 ORDER BY totalLiters ASC")
     fun getAllByLitersAsc(): Flow<List<MilkRecord>>
 
+    // Single Record Query
+    @Query("SELECT * FROM milk_records WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Int): MilkRecord?
+
     // Trash Queries
     @Query("SELECT * FROM milk_records WHERE isDeleted = 1")
     fun getTrashRecords(): Flow<List<MilkRecord>>
