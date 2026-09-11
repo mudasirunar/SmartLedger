@@ -179,6 +179,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
         val prefs = getSharedPreferences("SmartLedgerPrefs", MODE_PRIVATE)
         tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
+        headerView.findViewById<TextView>(R.id.tvAppVersion)?.text = "v${BuildConfig.VERSION_NAME}"
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {

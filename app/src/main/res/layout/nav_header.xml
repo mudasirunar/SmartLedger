@@ -9,8 +9,8 @@
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
     <ImageView
-        android:layout_width="100dp"
-        android:layout_height="100dp"
+        android:layout_width="84dp"
+        android:layout_height="84dp"
         android:src="@drawable/app_logo_drawer"
         android:contentDescription="App Logo" />
 
@@ -18,17 +18,27 @@
         android:id="@+id/headerName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="12dp"
         android:text="Smart Ledger"
         android:textAppearance="@style/TextAppearance.AppCompat.Body1"
         android:textColor="@color/white"
         android:textStyle="bold" />
 
     <TextView
+        android:id="@+id/tvAppVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="v1.3.1"
+        android:textColor="#B2DFDB"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView
         android:id="@+id/tvLastBackup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:text="Last backup: Never"
         android:textColor="#E0E0E0"
         android:textSize="11sp"/>

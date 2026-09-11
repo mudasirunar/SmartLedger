@@ -152,6 +152,9 @@ object DrawerNavigationHelper {
         navigationView: NavigationView,
         selectedCustomLedgerId: Int? = null
     ) {
+        val headerView = navigationView.getHeaderView(0)
+        headerView?.findViewById<TextView>(R.id.tvAppVersion)?.text = "v${com.mudasir.smartledger.BuildConfig.VERSION_NAME}"
+
         val db = AppDatabase.getDatabase(activity)
         activity.lifecycleScope.launch {
             db.customLedgerDao().getAllLedgers().collect { ledgers ->
@@ -189,9 +192,14 @@ object DrawerNavigationHelper {
 
     fun updateHeaderLastBackup(activity: AppCompatActivity, navigationView: NavigationView) {
         val headerView = navigationView.getHeaderView(0) ?: return
-        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup) ?: return
-        val prefs = activity.getSharedPreferences("SmartLedgerPrefs", Context.MODE_PRIVATE)
-        tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
+        val tvBackup = headerView.findViewById<TextView>(R.id.tvLastBackup)
+        if (tvBackup != null) {
+            val prefs = activity.getSharedPreferences("SmartLedgerPrefs", Context.MODE_PRIVATE)
+            tvBackup.text = "Last backup: ${prefs.getString("last_backup", "Never")}"
+        }
+
+        val tvAppVersion = headerView.findViewById<TextView>(R.id.tvAppVersion)
+        tvAppVersion?.text = "v${com.mudasir.smartledger.BuildConfig.VERSION_NAME}"
     }
 
     fun attachSwipeToOpenDrawer(
