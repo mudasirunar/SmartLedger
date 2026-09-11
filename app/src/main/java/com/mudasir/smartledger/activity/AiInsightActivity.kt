@@ -273,7 +273,6 @@ class AiInsightActivity : AppCompatActivity() {
         )
         val gradientDrawable = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors)
         toolbar.background = gradientDrawable
-        window.statusBarColor = Color.parseColor("#1A237E")
     }
 
 

@@ -11,8 +11,8 @@ import com.mudasir.smartledger.R
 
 /**
  * Utility helper to construct standard contextual ActionMode.Callback implementations.
- * Centralizes status bar color changes, drawer locking/unlocking, and FAB visibility toggling,
- * while leaving selection menu action handling and adapter teardown under activity control.
+ * Centralizes drawer locking/unlocking and FAB visibility toggling while preserving transparent
+ * edge-to-edge system bars, leaving selection menu action handling and adapter teardown under activity control.
  */
 object SelectionActionModeHelper {
 
@@ -29,7 +29,6 @@ object SelectionActionModeHelper {
                 mode.menuInflater.inflate(menuResId, menu)
                 mode.title = "0 Selected"
                 drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                activity.window.statusBarColor = activity.getColor(R.color.teal_dark)
                 (fabAdd as? FloatingActionButton)?.hide() ?: fabAdd?.let { it.visibility = View.GONE }
                 for (i in 0 until menu.size()) {
                     menu.getItem(i).icon?.setTint(activity.getColor(R.color.white))
@@ -50,7 +49,6 @@ object SelectionActionModeHelper {
 
             override fun onDestroyActionMode(mode: ActionMode) {
                 drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-                activity.window.statusBarColor = activity.getColor(R.color.teal_main)
                 (fabAdd as? FloatingActionButton)?.show() ?: fabAdd?.let { it.visibility = View.VISIBLE }
                 onDestroy()
             }
