@@ -77,17 +77,19 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
         })
 
         // Auto Cleanup logic
-        lifecycleScope.launch(Dispatchers.IO) {
-            val fifteenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(15)
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val fifteenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(15)
 
-            db.expenseDao().deleteExpiredTrash(fifteenDaysAgo)
-            db.electricityDao().deleteExpiredTrash(fifteenDaysAgo)
-            db.milkDao().deleteExpiredTrash(fifteenDaysAgo)
-            db.customLedgerDao().deleteExpiredTrash(fifteenDaysAgo)
-            db.customLedgerDao().autoCleanExpiredLedgers(fifteenDaysAgo)
+                db.expenseDao().deleteExpiredTrash(fifteenDaysAgo)
+                db.electricityDao().deleteExpiredTrash(fifteenDaysAgo)
+                db.milkDao().deleteExpiredTrash(fifteenDaysAgo)
+                db.customLedgerDao().deleteExpiredTrash(fifteenDaysAgo)
+                db.customLedgerDao().deleteExpiredDailyRecords(fifteenDaysAgo)
+                db.customLedgerDao().autoCleanExpiredLedgers(fifteenDaysAgo)
+            }
+            loadTrashItems()
         }
-
-        loadTrashItems()
     }
 
     private fun setupWindowInsets() {
@@ -155,8 +157,26 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
                 val list5 = dailyRecords.filterIsInstance<com.mudasir.smartledger.data.CustomDailyRecord>()
                     .filter { it.ledgerId !in trashedLedgerIds }
                     .map { record ->
-                        val ledgerName = db.customLedgerDao().getLedgerById(record.ledgerId)?.name ?: "Unknown"
-                        TrashItem.CustomDailyRecordItem(record, ledgerName)
+                        val ledger = db.customLedgerDao().getLedgerById(record.ledgerId)
+                        val ledgerName = ledger?.name ?: "Unknown"
+                        val summaryText = if (ledger != null && ledger.fields.isNotEmpty()) {
+                            val totals = DoubleArray(ledger.fields.size)
+                            for (entry in record.dailyEntries) {
+                                for (i in entry.values.indices) {
+                                    if (i < totals.size) totals[i] += (entry.values[i] ?: 0.0)
+                                }
+                            }
+                            val summaryList = mutableListOf<String>()
+                            ledger.fields.forEachIndexed { index, field ->
+                                val value = totals.getOrNull(index) ?: 0.0
+                                if (value > 0.0) {
+                                    val formattedValue = if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value).trimEnd('0').trimEnd('.')
+                                    summaryList.add("$formattedValue ${field.fieldName}")
+                                }
+                            }
+                            summaryList.joinToString(", ").takeIf { it.isNotEmpty() }
+                        } else null
+                        TrashItem.CustomDailyRecordItem(record, ledgerName, summaryText)
                     }
 
                 val list6 = (ledgers.filterIsInstance<com.mudasir.smartledger.data.CustomLedger>()).map { ledger ->
@@ -167,7 +187,7 @@ class TrashBinActivity : AppCompatActivity(), NavigationView.OnNavigationItemSel
                     } else 0
                     TrashItem.TrashedLedgerItem(ledger, entryCount)
                 }
-                (list1 + list2 + list3 + list4 + list5 + list6).sortedByDescending { it.deletedAt }
+                (list1 + list2 + list3 + list4 + list5 + list6).sortedByDescending { it.deletedAt ?: 0L }
             }.collect { fullList ->
                 adapter.submitList(fullList)
                 tvEmpty.visibility = if (fullList.isEmpty()) View.VISIBLE else View.GONE

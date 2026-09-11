@@ -53,7 +53,7 @@ interface ElectricityDao {
     @Query("DELETE FROM electricity_records WHERE id IN (:ids)")
     suspend fun hardDelete(ids: List<Int>)
 
-    @Query("DELETE FROM electricity_records WHERE isDeleted = 1 AND deletedAt < :cutoffTimestamp")
+    @Query("DELETE FROM electricity_records WHERE isDeleted = 1 AND (deletedAt IS NULL OR deletedAt <= 0 OR deletedAt < :cutoffTimestamp)")
     suspend fun deleteExpiredTrash(cutoffTimestamp: Long)
 
     // Add this for Backup

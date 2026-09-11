@@ -47,10 +47,13 @@ object BackupManager {
                             file.name
                         } else path
                     }
-                    if (expense.deletedAt == 0L || expense.deletedAt == null) {
+                    if (!expense.isDeleted) {
                         result.expenseAdded++
                     }
-                    expense.copy(imagePaths = newPaths)
+                    val safeDeletedAt = if (expense.isDeleted) {
+                        expense.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                    } else null
+                    expense.copy(imagePaths = newPaths, deletedAt = safeDeletedAt)
                 }
 
                 // 2. Process Electricity
@@ -63,15 +66,23 @@ object BackupManager {
                             file.name
                         } else path
                     }
-                    if (elec.deletedAt == 0L || elec.deletedAt == null) {
+                    if (!elec.isDeleted) {
                         result.elecAdded++
                     }
-                    elec.copy(imagePaths = newPaths)
+                    val safeDeletedAt = if (elec.isDeleted) {
+                        elec.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                    } else null
+                    elec.copy(imagePaths = newPaths, deletedAt = safeDeletedAt)
                 }
 
                 // 3. Process Milk
-                result.milkAdded = milk.count { it.deletedAt == 0L || it.deletedAt == null }
-
+                result.milkAdded = milk.count { !it.isDeleted }
+                val processedMilk = milk.map { m ->
+                    val safeDeletedAt = if (m.isDeleted) {
+                        m.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                    } else null
+                    m.copy(deletedAt = safeDeletedAt)
+                }
 
                 val customEntries = db.customLedgerDao().getAllRawEntries()
                 val customLedgers = db.customLedgerDao().getAllLedgersList()
@@ -95,7 +106,10 @@ object BackupManager {
                         result.customCounts[ledgerName] = (result.customCounts[ledgerName] ?: 0) + 1
                     }
 
-                    entry.copy(imagePaths = newPaths)
+                    val safeDeletedAt = if (entry.isDeleted) {
+                        entry.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                    } else null
+                    entry.copy(imagePaths = newPaths, deletedAt = safeDeletedAt)
                 }
 
                 val customDailyRecords = db.customLedgerDao().getAllRawDailyRecords()
@@ -108,14 +122,28 @@ object BackupManager {
                     }
                 }
 
+                val processedCustomLedgers = customLedgers.map { l ->
+                    val safeDeletedAt = if (l.isDeleted) {
+                        l.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                    } else null
+                    l.copy(deletedAt = safeDeletedAt)
+                }
+
+                val processedDailyRecords = customDailyRecords.map { r ->
+                    val safeDeletedAt = if (r.isDeleted) {
+                        r.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                    } else null
+                    r.copy(deletedAt = safeDeletedAt)
+                }
+
                 val backupData = BackupData(
                     timestamp = System.currentTimeMillis(),
                     expenses = processedExpenses,
                     electricity = processedElectricity,
-                    milkRecords = milk,
-                    customLedgers = customLedgers,
+                    milkRecords = processedMilk,
+                    customLedgers = processedCustomLedgers,
                     customEntries = processedCustomEntries,
-                    customDailyRecords = customDailyRecords
+                    customDailyRecords = processedDailyRecords
                 )
 
                 zos.putNextEntry(ZipEntry(JSON_FILENAME))
@@ -181,9 +209,13 @@ object BackupManager {
                             .sortedBy { it.deletedAt ?: 0L }
                             .find { it.date == incoming.date && it.amount == incoming.amount }
 
+                        val safeDeletedAt = if (incoming.isDeleted) {
+                            incoming.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                        } else null
+
                         if (existing == null) {
                             val paths = incoming.imagePaths.map { File(internalImgDir, it).absolutePath }
-                            db.expenseDao().insertExpense(incoming.copy(id = 0, imagePaths = paths))
+                            db.expenseDao().insertExpense(incoming.copy(id = 0, imagePaths = paths, deletedAt = safeDeletedAt))
 
                             if (!incoming.isDeleted) result.expenseAdded++
                         } else {
@@ -194,7 +226,7 @@ object BackupManager {
                                 val updatedRecord = incoming.copy(
                                     id = existing.id,
                                     isDeleted = incoming.isDeleted,
-                                    deletedAt = if (incoming.isDeleted) incoming.deletedAt else null
+                                    deletedAt = safeDeletedAt
                                 )
                                 db.expenseDao().updateExpense(updatedRecord)
 
@@ -213,9 +245,13 @@ object BackupManager {
                             .sortedBy { it.deletedAt ?: 0L }
                             .find { it.startDate == incoming.startDate && it.endDate == incoming.endDate }
 
+                        val safeDeletedAt = if (incoming.isDeleted) {
+                            incoming.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                        } else null
+
                         if (existing == null) {
                             val paths = incoming.imagePaths.map { File(internalImgDir, it).absolutePath }
-                            db.electricityDao().insert(incoming.copy(id = 0, imagePaths = paths))
+                            db.electricityDao().insert(incoming.copy(id = 0, imagePaths = paths, deletedAt = safeDeletedAt))
 
                             if (!incoming.isDeleted) result.elecAdded++
                         } else {
@@ -226,7 +262,7 @@ object BackupManager {
                                 val updatedRecord = incoming.copy(
                                     id = existing.id,
                                     isDeleted = incoming.isDeleted,
-                                    deletedAt = if (incoming.isDeleted) incoming.deletedAt else null
+                                    deletedAt = safeDeletedAt
                                 )
                                 db.electricityDao().update(updatedRecord)
 
@@ -245,8 +281,12 @@ object BackupManager {
                             .sortedBy { it.deletedAt ?: 0L }
                             .find { it.monthIndex == incoming.monthIndex && it.year == incoming.year }
 
+                        val safeDeletedAt = if (incoming.isDeleted) {
+                            incoming.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                        } else null
+
                         if (existing == null) {
-                            db.milkDao().insert(incoming.copy(id = 0))
+                            db.milkDao().insert(incoming.copy(id = 0, deletedAt = safeDeletedAt))
                             if (!incoming.isDeleted) {
                                 result.milkAdded++
                             }
@@ -261,7 +301,7 @@ object BackupManager {
                                 val updatedRecord = incoming.copy(
                                     id = existing.id,
                                     isDeleted = backupIsDeleted,
-                                    deletedAt = if (backupIsDeleted) incoming.deletedAt else null
+                                    deletedAt = safeDeletedAt
                                 )
 
                                 db.milkDao().update(updatedRecord)
@@ -283,14 +323,27 @@ object BackupManager {
                         val existingLedger = db.customLedgerDao().getAllLedgersList().find {
                             it.name.equals(incomingLedger.name, ignoreCase = true)
                         }
+                        val safeDeletedAt = if (incomingLedger.isDeleted) {
+                            incomingLedger.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                        } else null
 
                         if (existingLedger == null) {
                             val safeLedger = incomingLedger.copy(
                                 id = 0,
+                                isDeleted = incomingLedger.isDeleted,
+                                deletedAt = safeDeletedAt,
                                 dateMode = incomingLedger.dateMode,
                                 ledgerType = incomingLedger.ledgerType
                             )
                             db.customLedgerDao().insertLedger(safeLedger)
+                        } else {
+                            if (existingLedger.isDeleted != incomingLedger.isDeleted) {
+                                val updatedLedger = existingLedger.copy(
+                                    isDeleted = incomingLedger.isDeleted,
+                                    deletedAt = safeDeletedAt
+                                )
+                                db.customLedgerDao().insertLedger(updatedLedger)
+                            }
                         }
                     }
 
@@ -315,10 +368,15 @@ object BackupManager {
                                 val paths = incomingEntry.imagePaths.map { fileName ->
                                     File(internalImgDir, fileName).absolutePath
                                 }
+                                val safeDeletedAt = if (incomingEntry.isDeleted) {
+                                    incomingEntry.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                                } else null
                                 db.customLedgerDao().insertEntry(incomingEntry.copy(
                                     id = 0,
                                     ledgerId = targetLedger.id,
-                                    imagePaths = paths
+                                    imagePaths = paths,
+                                    isDeleted = incomingEntry.isDeleted,
+                                    deletedAt = safeDeletedAt
                                 ))
 
                                 if (!incomingEntry.isDeleted && !targetLedger.isDeleted) {
@@ -346,9 +404,13 @@ object BackupManager {
                                 incomingRecord.year
                             )
 
+                            val safeDeletedAt = if (incomingRecord.isDeleted) {
+                                incomingRecord.deletedAt?.takeIf { it > 0L } ?: System.currentTimeMillis()
+                            } else null
+
                             if (existing == null) {
                                 db.customLedgerDao().insertDailyRecord(
-                                    incomingRecord.copy(id = 0, ledgerId = targetLedger.id)
+                                    incomingRecord.copy(id = 0, ledgerId = targetLedger.id, deletedAt = safeDeletedAt)
                                 )
                                 if (!incomingRecord.isDeleted && !targetLedger.isDeleted) {
                                     val name = targetLedger.name
@@ -364,7 +426,7 @@ object BackupManager {
                                             id = existing.id,
                                             ledgerId = targetLedger.id,
                                             isDeleted = incomingRecord.isDeleted,
-                                            deletedAt = if (incomingRecord.isDeleted) incomingRecord.deletedAt else null
+                                            deletedAt = safeDeletedAt
                                         )
                                     )
                                     if (!incomingRecord.isDeleted && !targetLedger.isDeleted) {
@@ -380,6 +442,16 @@ object BackupManager {
                 }
             }
         }
+
+        // 3. AUTO-CLEANUP EXPIRED TRASH POST-RESTORE
+        val fifteenDaysAgo = System.currentTimeMillis() - java.util.concurrent.TimeUnit.DAYS.toMillis(15)
+        db.expenseDao().deleteExpiredTrash(fifteenDaysAgo)
+        db.electricityDao().deleteExpiredTrash(fifteenDaysAgo)
+        db.milkDao().deleteExpiredTrash(fifteenDaysAgo)
+        db.customLedgerDao().deleteExpiredTrash(fifteenDaysAgo)
+        db.customLedgerDao().deleteExpiredDailyRecords(fifteenDaysAgo)
+        db.customLedgerDao().autoCleanExpiredLedgers(fifteenDaysAgo)
+
         return@withContext result
     }
 

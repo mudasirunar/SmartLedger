@@ -10,6 +10,10 @@ sealed class TrashItem {
     data class TrashedLedgerItem(val ledger: CustomLedger, val entryCount: Int) : TrashItem() {
         override val deletedAt = ledger.deletedAt
     }
-    data class CustomDailyRecordItem(val record: CustomDailyRecord, val ledgerName: String) : TrashItem() { override val deletedAt = record.deletedAt }
+    data class CustomDailyRecordItem(
+        val record: CustomDailyRecord,
+        val ledgerName: String,
+        val summaryText: String? = null
+    ) : TrashItem() { override val deletedAt = record.deletedAt }
 
 }

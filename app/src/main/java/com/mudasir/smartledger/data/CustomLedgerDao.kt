@@ -87,11 +87,13 @@ interface CustomLedgerDao {
     @Query("SELECT * FROM custom_daily_records WHERE ledgerId = :ledgerId AND monthIndex = :month AND year = :year LIMIT 1")
     suspend fun getDailyRecordByMonthYear(ledgerId: Int, month: Int, year: Int): CustomDailyRecord?
 
-    @Query("SELECT id FROM custom_ledgers WHERE isDeleted = 1 AND deletedAt < :cutoff")
+    @Query("SELECT id FROM custom_ledgers WHERE isDeleted = 1 AND (deletedAt IS NULL OR deletedAt <= 0 OR deletedAt < :cutoff)")
     suspend fun getExpiredLedgerIds(cutoff: Long): List<Int>
+
     @Transaction
     suspend fun permanentlyDeleteLedger(ledgerId: Int) {
         deleteEntriesByLedgerId(ledgerId)
+        hardDeleteDailyRecordsByLedger(ledgerId)
         deleteLedgerById(ledgerId)
     }
 
@@ -164,8 +166,11 @@ interface CustomLedgerDao {
     @Query("DELETE FROM custom_entries WHERE id IN (:ids)")
     suspend fun hardDeleteEntries(ids: List<Long>)
 
-    @Query("DELETE FROM custom_entries WHERE isDeleted = 1 AND deletedAt < :cutoff")
+    @Query("DELETE FROM custom_entries WHERE isDeleted = 1 AND (deletedAt IS NULL OR deletedAt <= 0 OR deletedAt < :cutoff)")
     suspend fun deleteExpiredTrash(cutoff: Long)
+
+    @Query("DELETE FROM custom_daily_records WHERE isDeleted = 1 AND (deletedAt IS NULL OR deletedAt <= 0 OR deletedAt < :cutoff)")
+    suspend fun deleteExpiredDailyRecords(cutoff: Long)
 
     @Transaction
     suspend fun deleteLedgerAndAllEntries(ledgerId: Int) {

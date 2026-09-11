@@ -39,7 +39,7 @@ interface ExpenseDao {
     suspend fun hardDeleteExpenses(ids: List<Int>)
 
     // Auto-Cleanup (Delete items older than 15 days)
-    @Query("DELETE FROM expenses WHERE isDeleted = 1 AND deletedAt < :cutoffTimestamp")
+    @Query("DELETE FROM expenses WHERE isDeleted = 1 AND (deletedAt IS NULL OR deletedAt <= 0 OR deletedAt < :cutoffTimestamp)")
     suspend fun deleteExpiredTrash(cutoffTimestamp: Long)
 
     @Query("DELETE FROM expenses")

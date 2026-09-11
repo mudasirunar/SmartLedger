@@ -133,6 +133,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             db.electricityDao().deleteExpiredTrash(fifteenDaysAgo)
             db.milkDao().deleteExpiredTrash(fifteenDaysAgo)
             db.customLedgerDao().deleteExpiredTrash(fifteenDaysAgo)
+            db.customLedgerDao().deleteExpiredDailyRecords(fifteenDaysAgo)
             db.customLedgerDao().autoCleanExpiredLedgers(fifteenDaysAgo)
 
             // Pre-warm RAM cache in background on app start for 0ms instant open

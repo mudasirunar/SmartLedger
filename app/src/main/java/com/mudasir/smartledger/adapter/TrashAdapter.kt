@@ -92,6 +92,7 @@ class TrashAdapter(
         val tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
         val tvAmount: TextView = itemView.findViewById(R.id.tvAmount)
         val tvDate: TextView = itemView.findViewById(R.id.tvDate)
+        val tvDot: TextView = itemView.findViewById(R.id.tvDot)
         val tvDaysLeft: TextView = itemView.findViewById(R.id.tvDaysLeft)
         val checkbox: CheckBox = itemView.findViewById(R.id.checkbox)
         val cardView: CardView = itemView as CardView
@@ -147,12 +148,25 @@ class TrashAdapter(
                     tvBadge.text = item.ledgerName
                     tvTitle.text = item.record.monthName
                     tvAmount.text = "Rs ${item.record.totalAmount.toInt()}"
-                    tvDate.text = "${item.record.dailyEntries.size} Days"
+                    tvDate.text = item.summaryText ?: ""
                 }
 
             }
 
-            val deletedAt = item.deletedAt ?: System.currentTimeMillis()
+            if (tvDate.text.isNullOrEmpty()) {
+                tvDate.visibility = View.GONE
+                tvDot.visibility = View.GONE
+            } else {
+                tvDate.visibility = View.VISIBLE
+                tvDot.visibility = View.VISIBLE
+            }
+
+            val rawDeletedAt = item.deletedAt
+            val deletedAt = if (rawDeletedAt == null || rawDeletedAt <= 0L) {
+                System.currentTimeMillis()
+            } else {
+                rawDeletedAt
+            }
             val expiryTime = deletedAt + TimeUnit.DAYS.toMillis(15)
             val remainingMillis = expiryTime - System.currentTimeMillis()
             val totalDaysLeft = TimeUnit.MILLISECONDS.toDays(remainingMillis)
